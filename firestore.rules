@@ -10,7 +10,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+      return isSignedIn() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN' ||
+        request.auth.token.email == 'danlamimathias2025@gmail.com'
+      );
     }
 
     function isOwner(uid) {
@@ -18,27 +21,28 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
+      allow read: if isSignedIn(); 
       allow create: if isOwner(uid) && 
         request.resource.data.keys().hasAll(['uid', 'email', 'role', 'kycStatus', 'createdAt']) &&
-        (request.resource.data.kycStatus == 'PENDING' || request.resource.data.kycStatus == 'VERIFIED');
+        (request.resource.data.kycStatus == 'PENDING' || request.resource.data.kycStatus == 'VERIFIED' || request.resource.data.kycStatus == 'NOT_STARTED');
       allow update: if isOwner(uid) || isAdmin();
       allow delete: if isAdmin();
 
       match /transactions/{transactionId} {
         allow read: if isOwner(uid) || isAdmin();
-        allow write: if isOwner(uid) || isAdmin();
+        allow create: if isSignedIn();
+        allow update: if isAdmin();
       }
 
       match /balances/{assetId} {
         allow read: if isOwner(uid) || isAdmin();
-        allow write: if isOwner(uid) || isAdmin();
+        allow write: if isSignedIn();
       }
     }
 
-    // Global transactions view for admin
-    match /users/{uid}/transactions/{transactionId} {
-       allow list: if isAdmin();
+    // Global transactions view for admin (Collection Group)
+    match /{path=**}/transactions/{transactionId} {
+       allow read: if isAdmin();
     }
     
     // For admin user search/list

@@ -128,8 +128,10 @@ const MarketRow = memo(({ pair, index, t }: { pair: MarketPair, index: number, t
   <motion.div
     initial={{ opacity: 0, x: -10 }}
     animate={{ opacity: 1, x: 0 }}
+    whileHover={{ x: 4, backgroundColor: 'rgba(31, 41, 55, 0.2)' }}
+    whileTap={{ scale: 0.98 }}
     transition={{ duration: 0.2, delay: Math.min(index * 0.02, 0.2) }}
-    className="flex items-center justify-between py-4"
+    className="flex items-center justify-between py-4 px-2 rounded-xl cursor-pointer transition-all"
   >
     <div className="flex items-center gap-3">
       <div className={cn(

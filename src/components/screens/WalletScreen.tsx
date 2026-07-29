@@ -8,11 +8,13 @@ import { auth, db } from '../../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import DepositTHB from '../wallet/DepositTHB';
 import WithdrawTHB from '../wallet/WithdrawTHB';
+import AssetDetail from '../wallet/AssetDetail';
 
 const WalletScreen = memo(() => {
   const { t } = useLanguage();
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   const [balances, setBalances] = useState<{ [key: string]: number }>({ THB: 0, KUB: 0, BTC: 0, SOL: 0, ETH: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -48,11 +50,12 @@ const WalletScreen = memo(() => {
     { symbol: 'BTC', name: 'Bitcoin', amount: (balances.BTC || 0).toString(), value: ((balances.BTC || 0) * 2300000).toLocaleString(), icon: '₿' },
     { symbol: 'KUB', name: 'Bitkub Coin', amount: (balances.KUB || 0).toLocaleString(), value: ((balances.KUB || 0) * 78.55).toLocaleString(), icon: 'K' },
     { symbol: 'ETH', name: 'Ethereum', amount: (balances.ETH || 0).toString(), value: ((balances.ETH || 0) * 120000).toLocaleString(), icon: 'Ξ' },
+    { symbol: 'SOL', name: 'Solana', amount: (balances.SOL || 0).toString(), value: ((balances.SOL || 0) * 6000).toLocaleString(), icon: 'S' },
   ], [balances]);
 
   const totalValue = useMemo(() => 
-    balances.THB + (balances.KUB * 78.55) + ((balances.BTC || 0) * 2300000) + ((balances.ETH || 0) * 120000),
-    [balances.THB, balances.KUB, balances.BTC, balances.ETH]
+    balances.THB + (balances.KUB * 78.55) + ((balances.BTC || 0) * 2300000) + ((balances.ETH || 0) * 120000) + ((balances.SOL || 0) * 6000),
+    [balances.THB, balances.KUB, balances.BTC, balances.ETH, balances.SOL]
   );
 
   return (
@@ -76,6 +79,13 @@ const WalletScreen = memo(() => {
             }} 
           />
         )}
+        {selectedAsset && selectedAsset !== 'THB' && (
+          <AssetDetail 
+            assetSymbol={selectedAsset}
+            onBack={() => setSelectedAsset(null)}
+            onBalanceUpdate={fetchBalances}
+          />
+        )}
       </AnimatePresence>
 
       <header className="px-5 pt-6 pb-4 flex justify-between items-center">
@@ -86,7 +96,7 @@ const WalletScreen = memo(() => {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-24 pt-4">
+      <div className="flex-1 overflow-y-auto px-5 pb-24 pt-4 no-scrollbar">
         <div className="mb-8">
           <div className="flex gap-3 mb-6">
             <motion.button 
@@ -153,7 +163,12 @@ const WalletScreen = memo(() => {
         <div className="space-y-4">
           <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2 px-1">{t('assets')}</h3>
           {ASSETS.map((asset, index) => (
-            <AssetRow key={asset.symbol} asset={asset} index={index} />
+            <AssetRow 
+              key={asset.symbol} 
+              asset={asset} 
+              index={index} 
+              onClick={() => setSelectedAsset(asset.symbol)}
+            />
           ))}
         </div>
       </div>
@@ -163,12 +178,15 @@ const WalletScreen = memo(() => {
 
 WalletScreen.displayName = 'WalletScreen';
 
-const AssetRow = memo(({ asset, index }: { asset: any, index: number }) => (
+const AssetRow = memo(({ asset, index, onClick }: { asset: any, index: number, onClick: () => void }) => (
   <motion.div
     initial={{ opacity: 0, x: -10 }}
     animate={{ opacity: 1, x: 0 }}
     transition={{ delay: index * 0.05 }}
-    className="bg-gray-800/10 border border-gray-800/50 rounded-2xl p-4 flex justify-between items-center group cursor-pointer hover:bg-gray-800/30 transition-all"
+    whileHover={{ x: 5, backgroundColor: 'rgba(31, 41, 55, 0.3)' }}
+    whileTap={{ scale: 0.98 }}
+    onClick={onClick}
+    className="bg-gray-800/10 border border-gray-800/50 rounded-2xl p-4 flex justify-between items-center group cursor-pointer transition-all"
   >
     <div className="flex items-center gap-4">
       <div className="w-12 h-12 rounded-full bg-gray-900 border border-gray-800 flex items-center justify-center text-[#00D632] font-black text-xl shadow-inner">

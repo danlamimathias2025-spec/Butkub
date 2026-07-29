@@ -192,98 +192,99 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
 
         {/* Dynamic Inputs Based on Method */}
         <div className="space-y-6 mb-8">
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest px-1">
-              {method === 'giftcard' ? 'Gift Card Value' : t('deposit_amount')}
-            </label>
-            <div className="relative">
-              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-white font-black text-xl">฿</span>
-              <input 
-                type="number" 
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                className="w-full bg-gray-800/20 border border-gray-800 rounded-2xl pl-12 pr-5 py-4 text-white font-bold text-xl placeholder:text-gray-700 focus:outline-none focus:border-[#00D632]/30 transition-colors"
-              />
-            </div>
-          </div>
+          {method === 'transfer' ? (
+            <div className="bg-[#1A1F26] border border-gray-800 rounded-3xl p-6 text-center">
+              <div className="w-16 h-16 bg-[#00D632]/10 rounded-2xl flex items-center justify-center text-[#00D632] mx-auto mb-6">
+                <QrCode className="w-8 h-8" />
+              </div>
+              <h2 className="text-white font-black uppercase tracking-tight mb-2">Receive via Email</h2>
+              <p className="text-xs text-gray-500 font-medium mb-6 leading-relaxed">
+                Give your registered email address to the sender to receive funds instantly from another Bitkub user.
+              </p>
 
-          {method === 'giftcard' && (
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest px-1">Upload Gift Card Image</label>
-              <div className="relative group">
-                <input 
-                  type="file" 
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                />
-                <div className={cn(
-                  "w-full h-32 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all",
-                  giftCardImage ? "border-[#00D632] bg-[#00D632]/5" : "border-gray-800 bg-gray-800/10"
-                )}>
-                  {giftCardImage ? (
-                    <img src={giftCardImage} alt="Gift card" className="w-full h-full object-cover rounded-2xl opacity-40" />
-                  ) : (
-                    <>
-                      <Camera className="w-8 h-8 text-gray-600 mb-2" />
-                      <span className="text-[10px] text-gray-500 font-bold uppercase">Click or drag image</span>
-                    </>
-                  )}
-                  {giftCardImage && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                       <Check className="w-8 h-8 text-[#00D632]" />
-                    </div>
-                  )}
+              <div className="bg-black/40 border border-gray-800 rounded-2xl p-4 flex items-center justify-between group">
+                <div className="flex flex-col items-start">
+                  <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-1">Your Email Address</span>
+                  <span className="text-white font-bold text-sm tracking-tight">{auth.currentUser?.email}</span>
                 </div>
+                <button 
+                  onClick={() => {
+                    if (auth.currentUser?.email) {
+                      copyToClipboard(auth.currentUser.email);
+                      alert('Email copied to clipboard');
+                    }
+                  }}
+                  className="p-3 bg-white/5 rounded-xl text-gray-400 hover:text-[#00D632] hover:bg-[#00D632]/10 transition-all active:scale-90"
+                >
+                  <Copy className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-gray-800/50">
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
+                  Funds will appear in your wallet <br/> as soon as the sender confirms.
+                </p>
               </div>
             </div>
-          )}
-          
-          <div className="flex gap-2">
-            {[1000, 5000, 10000].map((val) => (
-              <button 
-                key={val}
-                onClick={() => setAmount(val.toString())}
-                className="flex-1 py-3 bg-gray-800/40 rounded-xl text-xs font-bold text-gray-400 border border-gray-700/50 hover:border-[#00D632]/30 hover:text-white transition-all"
+          ) : (
+            <>
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest px-1">
+                  Gift Card Value
+                </label>
+                <div className="relative">
+                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-white font-black text-xl">฿</span>
+                  <input 
+                    type="number" 
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full bg-gray-800/20 border border-gray-800 rounded-2xl pl-12 pr-5 py-4 text-white font-bold text-xl placeholder:text-gray-700 focus:outline-none focus:border-[#00D632]/30 transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest px-1">Upload Gift Card Image</label>
+                <div className="relative group">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                  />
+                  <div className={cn(
+                    "w-full h-32 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all",
+                    giftCardImage ? "border-[#00D632] bg-[#00D632]/5" : "border-gray-800 bg-gray-800/10"
+                  )}>
+                    {giftCardImage ? (
+                      <img src={giftCardImage} alt="Gift card" className="w-full h-full object-cover rounded-2xl opacity-40" />
+                    ) : (
+                      <>
+                        <Camera className="w-8 h-8 text-gray-600 mb-2" />
+                        <span className="text-[10px] text-gray-500 font-bold uppercase">Click or drag image</span>
+                      </>
+                    )}
+                    {giftCardImage && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                         <Check className="w-8 h-8 text-[#00D632]" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <motion.button 
+                whileTap={{ scale: 0.98 }}
+                disabled={!amount || loading || !giftCardImage}
+                onClick={handleDepositRequest}
+                className="w-full py-4 rounded-2xl bg-[#00D632] text-black font-black text-lg shadow-[0_10px_30px_rgba(0,214,50,0.2)] disabled:opacity-50 disabled:shadow-none transition-all"
               >
-                +฿{val.toLocaleString()}
-              </button>
-            ))}
-          </div>
-
-          <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4 flex gap-3">
-            <Send className="w-5 h-5 text-blue-400 flex-shrink-0" />
-            <p className="text-[10px] text-blue-400 font-medium leading-relaxed">
-              After submitting, you will receive a unique paycode. Message our admin on Telegram to complete the deposit.
-            </p>
-          </div>
+                {loading ? 'Processing...' : 'Submit Deposit Request'}
+              </motion.button>
+            </>
+          )}
         </div>
-
-        {/* Rules Checkbox */}
-        <button 
-          onClick={() => setAgreed(!agreed)}
-          className="flex gap-3 mb-8 text-left group"
-        >
-          <div className={cn(
-            "w-5 h-5 rounded-md border flex items-center justify-center transition-all mt-0.5",
-            agreed ? "bg-[#00D632] border-[#00D632]" : "bg-gray-800/50 border-gray-700 group-hover:border-gray-500"
-          )}>
-            {agreed && <Check className="w-3 h-3 text-black" />}
-          </div>
-          <span className="text-[10px] text-gray-400 font-medium leading-relaxed flex-1">
-            I agree to the deposit terms and acknowledge that deposits must be manually verified via Telegram admin.
-          </span>
-        </button>
-
-        <motion.button 
-          whileTap={{ scale: 0.98 }}
-          disabled={!amount || !agreed || loading || (method === 'giftcard' && !giftCardImage)}
-          onClick={handleDepositRequest}
-          className="w-full py-4 rounded-2xl bg-[#00D632] text-black font-black text-lg shadow-[0_10px_30px_rgba(0,214,50,0.2)] disabled:opacity-50 disabled:shadow-none transition-all"
-        >
-          {loading ? 'Processing...' : 'Submit Deposit Request'}
-        </motion.button>
       </div>
 
       {/* Confirmation Modal */}

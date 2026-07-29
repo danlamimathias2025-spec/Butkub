@@ -5,16 +5,21 @@ import { auth, db } from '../../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import TopNav from '../TopNav';
 import PortfolioCard from '../PortfolioCard';
+import PerformanceCard from '../PerformanceCard';
 import BannerCarousel from '../BannerCarousel';
 import MarketTicker from '../MarketTicker';
 import DepositTHB from '../wallet/DepositTHB';
 import WithdrawTHB from '../wallet/WithdrawTHB';
+import SendMoney from '../wallet/SendMoney';
+import NotificationsScreen from './NotificationsScreen';
 import KYCScreen from '../auth/KYCScreen';
 import Skeleton from '../Skeleton';
 
 export default function HomeScreen() {
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
+  const [showSend, setShowSend] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [showKYC, setShowKYC] = useState(false);
   const [kycStatus, setKycStatus] = useState<string>('NOT_STARTED');
   const [loading, setLoading] = useState(true);
@@ -53,7 +58,20 @@ export default function HomeScreen() {
             onSuccess={() => setShowWithdraw(false)} 
           />
         )}
-        {showKYC && (
+        {showSend && (
+        <SendMoney 
+          onBack={() => setShowSend(false)} 
+          onSuccess={() => setShowSend(false)} 
+        />
+      )}
+
+      {showNotifications && (
+        <NotificationsScreen 
+          onBack={() => setShowNotifications(false)} 
+        />
+      )}
+
+      {showKYC && (
           <div className="fixed inset-0 z-[150] bg-black">
             <KYCScreen 
               onBack={() => setShowKYC(false)}
@@ -63,7 +81,7 @@ export default function HomeScreen() {
         )}
       </AnimatePresence>
 
-      <TopNav />
+      <TopNav onNotificationsClick={() => setShowNotifications(true)} />
       
       {loading ? (
         <div className="px-5 mb-4">
@@ -101,7 +119,16 @@ export default function HomeScreen() {
         <PortfolioCard 
           onDeposit={() => setShowDeposit(true)} 
           onWithdraw={() => setShowWithdraw(true)} 
+          onSend={() => setShowSend(true)}
         />
+      )}
+
+      {loading ? (
+        <div className="px-5 py-4">
+          <Skeleton className="w-full h-48 rounded-3xl" />
+        </div>
+      ) : (
+        <PerformanceCard />
       )}
       
       {loading ? (
@@ -127,7 +154,7 @@ export default function HomeScreen() {
         whileTap={{ scale: 0.9 }}
         className="fixed bottom-28 right-6 w-14 h-14 bg-[#00D632] rounded-full flex items-center justify-center shadow-2xl shadow-[#00D632]/40 z-[100] border-4 border-[#0D1117]"
       >
-        <Send className="w-6 h-6 text-black fill-current" />
+        <MessageCircle className="w-6 h-6 text-black" />
         <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-[#0D1117] animate-pulse" />
       </motion.a>
     </div>

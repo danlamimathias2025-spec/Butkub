@@ -4,7 +4,11 @@ import { motion } from 'motion/react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { cn } from '@/src/lib/utils';
 
-const TopNav = memo(() => {
+interface TopNavProps {
+  onNotificationsClick?: () => void;
+}
+
+const TopNav = memo(({ onNotificationsClick }: TopNavProps) => {
   const { language, setLanguage } = useLanguage();
 
   return (
@@ -52,7 +56,11 @@ const TopNav = memo(() => {
       </div>
 
       <div className="flex items-center gap-2">
-        <motion.button whileTap={{ scale: 0.95 }} className="p-2 rounded-full hover:bg-gray-800 text-gray-400">
+        <motion.button 
+          whileTap={{ scale: 0.95 }} 
+          onClick={onNotificationsClick}
+          className="p-2 rounded-full hover:bg-gray-800 text-gray-400"
+        >
           <Bell className="w-5 h-5" />
         </motion.button>
         <motion.button whileTap={{ scale: 0.95 }} className="p-2 rounded-full hover:bg-gray-800 text-gray-400">

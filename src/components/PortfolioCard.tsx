@@ -1,5 +1,5 @@
 import React, { useState, memo } from 'react';
-import { Eye, EyeOff, Plus, ArrowUpRight, ArrowDownRight, QrCode, Repeat } from 'lucide-react';
+import { Eye, EyeOff, Plus, ArrowUpRight, ArrowDownRight, QrCode, Repeat, Send } from 'lucide-react';
 import { motion } from 'motion/react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import { cn } from '@/src/lib/utils';
@@ -16,7 +16,7 @@ const TREND_DATA = [
   { value: 350000 },
 ];
 
-const PortfolioCard = memo(({ onDeposit, onWithdraw }: { onDeposit: () => void; onWithdraw: () => void }) => {
+const PortfolioCard = memo(({ onDeposit, onWithdraw, onSend }: { onDeposit: () => void; onWithdraw: () => void; onSend: () => void }) => {
   const [isVisible, setIsVisible] = useState(true);
   const { t } = useLanguage();
 
@@ -71,7 +71,7 @@ const PortfolioCard = memo(({ onDeposit, onWithdraw }: { onDeposit: () => void; 
         <div className="grid grid-cols-4 gap-2">
           <QuickAction icon={<Plus className="w-6 h-6" />} label={t('deposit')} onClick={onDeposit} />
           <QuickAction icon={<ArrowUpRight className="w-6 h-6" />} label={t('withdraw')} onClick={onWithdraw} />
-          <QuickAction icon={<Repeat className="w-6 h-6" />} label={t('buy_sell')} />
+          <QuickAction icon={<Send className="w-6 h-6" />} label="Send" onClick={onSend} />
           <QuickAction icon={<QrCode className="w-6 h-6" />} label={t('promptpay')} onClick={onDeposit} />
         </div>
       </motion.div>
