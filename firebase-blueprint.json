@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Extended user information including KYC status",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["USER", "ADMIN"] },
+        "kycStatus": { "type": "string", "enum": ["PENDING", "VERIFIED", "REJECTED"] },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "kycStatus"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "User trade or transfer transaction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "type": { "type": "string", "enum": ["BUY", "SELL", "DEPOSIT", "WITHDRAW"] },
+        "asset": { "type": "string" },
+        "amount": { "type": "number" },
+        "price": { "type": "number" },
+        "fee": { "type": "number" },
+        "status": { "type": "string", "enum": ["PENDING", "COMPLETED", "REJECTED", "CANCELLED"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "asset", "amount", "status", "timestamp"]
+    },
+    "Balance": {
+      "title": "Balance",
+      "description": "User asset balance",
+      "type": "object",
+      "properties": {
+        "asset": { "type": "string" },
+        "amount": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["asset", "amount"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profile document"
+    },
+    "/users/{uid}/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "User transaction records"
+    },
+    "/users/{uid}/balances/{assetId}": {
+      "schema": "Balance",
+      "description": "User asset balances"
+    }
+  }
+}

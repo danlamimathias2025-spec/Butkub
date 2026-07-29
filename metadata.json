@@ -1,0 +1,6 @@
+{
+  "name": "Bitkub",
+  "description": "Bitkub is Thailand's leading cryptocurrency exchange app, offering a sleek, professional crypto dashboard in a premium dark mode theme.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
