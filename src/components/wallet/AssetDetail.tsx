@@ -95,14 +95,38 @@ export default function AssetDetail({ assetSymbol, onBack, onBalanceUpdate }: As
         }
 
         // Log transaction
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let randomStr = '';
+        for (let i = 0; i < 8; i++) {
+          randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        const txId = `TX-${now.toISOString().slice(2, 10).replace(/-/g, '')}-${randomStr}`;
+
+        const senderInfo = tradeMode === 'BUY'
+          ? { name: auth.currentUser!.email || 'User Account', account: 'THB Wallet', type: 'Bitkub User' }
+          : { name: auth.currentUser!.email || 'User Account', account: `${assetSymbol} Wallet`, type: 'Bitkub User' };
+
+        const receiverInfo = tradeMode === 'BUY'
+          ? { name: 'Bitkub Order Book / Liquidity Pool', account: `${assetSymbol} Spot Market`, type: 'System Exchange' }
+          : { name: 'Bitkub Order Book / Liquidity Pool', account: 'THB Spot Market', type: 'System Exchange' };
+
         const txRef = doc(collection(db, 'users', userUid, 'transactions'));
         transaction.set(txRef, {
+          txId,
           type: tradeMode,
           asset: assetSymbol,
           amount: numAmount,
           price: asset.price,
           total: totalCost,
-          timestamp: serverTimestamp(),
+          fee: 0,
+          timestamp: now.toISOString(),
+          dateStr,
+          timeStr,
+          senderInfo,
+          receiverInfo,
           status: 'COMPLETED'
         });
       });
@@ -140,7 +164,7 @@ export default function AssetDetail({ assetSymbol, onBack, onBalanceUpdate }: As
         <div className="w-10" />
       </header>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar">
+      <div className="flex-1 overflow-y-auto pb-28 no-scrollbar">
         {/* Price Section */}
         <div className="px-5 py-8 text-center">
           <div className="flex items-center justify-center gap-3 mb-2">
@@ -161,7 +185,7 @@ export default function AssetDetail({ assetSymbol, onBack, onBalanceUpdate }: As
 
         {/* Chart Section */}
         <div className="h-64 px-2 mb-8">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
@@ -207,12 +231,12 @@ export default function AssetDetail({ assetSymbol, onBack, onBalanceUpdate }: As
 
         {/* Actions */}
         <div className="px-5 space-y-4 mb-10">
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             <motion.button 
               whileTap={{ scale: 0.96 }}
               whileHover={{ scale: 1.02 }}
               onClick={() => setTradeMode('BUY')}
-              className="flex-1 py-5 bg-[#00D632] text-black rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg shadow-[#00D632]/20 transition-all"
+              className="flex-1 py-2.5 bg-[#00D632] text-black rounded-xl font-bold uppercase tracking-wider text-xs shadow-md shadow-[#00D632]/20 hover:bg-[#00B62A] transition-all"
             >
               Quick Buy
             </motion.button>
@@ -220,7 +244,7 @@ export default function AssetDetail({ assetSymbol, onBack, onBalanceUpdate }: As
               whileTap={{ scale: 0.96 }}
               whileHover={{ scale: 1.02 }}
               onClick={() => setTradeMode('SELL')}
-              className="flex-1 py-5 bg-gray-800 text-white rounded-2xl font-black uppercase tracking-widest text-sm border border-gray-700 transition-all"
+              className="flex-1 py-2.5 bg-gray-800 text-white rounded-xl font-bold uppercase tracking-wider text-xs border border-gray-700 hover:bg-gray-700 transition-all"
             >
               Quick Sell
             </motion.button>
@@ -317,13 +341,13 @@ export default function AssetDetail({ assetSymbol, onBack, onBalanceUpdate }: As
                     disabled={tradeLoading || !amount}
                     onClick={handleTrade}
                     className={cn(
-                      "w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition-all shadow-lg",
-                      tradeMode === 'BUY' ? "bg-[#00D632] text-black shadow-[#00D632]/20" : "bg-white text-black",
+                      "w-full py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all shadow-md",
+                      tradeMode === 'BUY' ? "bg-[#00D632] text-black shadow-[#00D632]/20 hover:bg-[#00B62A]" : "bg-red-500 text-white shadow-red-500/20 hover:bg-red-600",
                       tradeLoading && "opacity-50"
                     )}
                   >
                     {tradeLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <>
                         {tradeMode === 'BUY' ? 'Confirm Purchase' : 'Confirm Sale'}

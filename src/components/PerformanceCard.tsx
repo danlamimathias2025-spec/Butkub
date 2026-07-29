@@ -40,7 +40,7 @@ export default function PerformanceCard() {
         </div>
 
         <div className="h-48 w-full mb-6">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <BarChart data={PERFORMANCE_DATA} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} opacity={0.1} />
               <XAxis 

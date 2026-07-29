@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
+import { useNavScroll } from '../../contexts/NavScrollContext';
 import { auth, db } from '../../lib/firebase';
 import { ASSETS_DATA } from '../../data';
 import { collection, getDocs } from 'firebase/firestore';
@@ -15,6 +16,7 @@ import AssetDetail from '../wallet/AssetDetail';
 const WalletScreen = memo(() => {
   const { t } = useLanguage();
   const { format, currency } = useCurrency();
+  const { isNavVisible } = useNavScroll();
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
@@ -114,13 +116,22 @@ const WalletScreen = memo(() => {
         )}
       </AnimatePresence>
 
-      <header className="px-5 pt-4 pb-2 flex justify-between items-center">
+      <motion.header 
+        initial={false}
+        animate={{ 
+          y: isNavVisible ? 0 : -80, 
+          opacity: isNavVisible ? 1 : 0 
+        }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className="sticky top-2 z-50 mx-4 my-2 px-4 py-2 bg-[#0D1117]/80 backdrop-blur-2xl rounded-2xl border border-gray-800/80 shadow-2xl flex justify-between items-center"
+        style={{ pointerEvents: isNavVisible ? 'auto' : 'none' }}
+      >
         <h1 className="text-lg font-bold text-white tracking-tight uppercase">{t('wallet')}</h1>
         <div className="flex items-center gap-1">
           <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Total</span>
           <span className="text-xs font-bold text-[#00D632]">{format(totalValue)}</span>
         </div>
-      </header>
+      </motion.header>
 
       <div className="flex-1 overflow-y-auto px-5 pb-24 pt-2 no-scrollbar">
         <div className="mb-6">
@@ -160,7 +171,7 @@ const WalletScreen = memo(() => {
                <span className="text-base font-black text-white">{ASSETS.filter(a => Number(a.amount) > 0).length} Assets</span>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <PieChart>
               <Pie
                 data={PORTFOLIO_DATA}

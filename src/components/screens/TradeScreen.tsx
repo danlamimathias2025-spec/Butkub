@@ -3,13 +3,16 @@ import { ChevronDown, BarChart2, AlertCircle, CheckCircle2, ArrowUpDown, Info, Z
 import { motion, AnimatePresence } from 'motion/react';
 import StatusOverlay from '../StatusOverlay';
 import { cn } from '@/src/lib/utils';
+import { triggerHaptic } from '@/src/lib/haptics';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useNavScroll } from '../../contexts/NavScrollContext';
 import { auth, db } from '../../lib/firebase';
 import { doc, getDoc, setDoc, runTransaction, collection } from 'firebase/firestore';
 import { ASSETS_DATA } from '../../data';
 
 const TradeScreen = memo(() => {
   const { t } = useLanguage();
+  const { isNavVisible } = useNavScroll();
   const [activeTab, setActiveTab] = useState<'SPOT' | 'CONVERT'>('SPOT');
   const [side, setSide] = useState<'BUY' | 'SELL'>('BUY');
   const [orderType, setOrderType] = useState('Market Order');
@@ -111,14 +114,39 @@ const TradeScreen = memo(() => {
           transaction.set(kubRef, { amount: currentKUB - numAmount, updatedAt: new Date().toISOString() }, { merge: true });
         }
 
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let randomStr = '';
+        for (let i = 0; i < 8; i++) {
+          randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        const txId = `TX-${now.toISOString().slice(2, 10).replace(/-/g, '')}-${randomStr}`;
+
+        const senderInfo = side === 'BUY' 
+          ? { name: auth.currentUser!.email || 'User Account', account: 'THB Wallet', type: 'Bitkub User' }
+          : { name: auth.currentUser!.email || 'User Account', account: 'KUB Wallet', type: 'Bitkub User' };
+
+        const receiverInfo = side === 'BUY'
+          ? { name: 'Bitkub Order Book / Liquidity Pool', account: 'KUB Spot Market', type: 'System Exchange' }
+          : { name: 'Bitkub Order Book / Liquidity Pool', account: 'THB Spot Market', type: 'System Exchange' };
+
         const newTxRef = doc(txCollectionRef);
         transaction.set(newTxRef, {
+          txId,
           type: side,
           asset: 'KUB/THB',
           amount: numAmount,
           price: PRICE,
+          total: totalCost,
+          fee: 0,
           status: 'COMPLETED',
-          timestamp: new Date().toISOString()
+          timestamp: now.toISOString(),
+          dateStr,
+          timeStr,
+          senderInfo,
+          receiverInfo
         });
       });
 
@@ -127,6 +155,7 @@ const TradeScreen = memo(() => {
         KUB: side === 'BUY' ? prev.KUB + numAmount : prev.KUB - numAmount
       }));
 
+      triggerHaptic('success');
       setStatus({
         type: 'success',
         title: 'Order Completed',
@@ -135,6 +164,7 @@ const TradeScreen = memo(() => {
       setAmount('');
     } catch (error: any) {
       console.error("Trade error:", error);
+      triggerHaptic('error');
       setStatus({
         type: 'error',
         title: 'Order Failed',
@@ -185,15 +215,45 @@ const TradeScreen = memo(() => {
         transaction.set(fromRef, { amount: currentFrom - numAmount, updatedAt: new Date().toISOString() }, { merge: true });
         transaction.set(toRef, { amount: currentTo + toAmount, updatedAt: new Date().toISOString() }, { merge: true });
 
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let randomStr = '';
+        for (let i = 0; i < 8; i++) {
+          randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        const txId = `TX-${now.toISOString().slice(2, 10).replace(/-/g, '')}-${randomStr}`;
+
+        const senderInfo = {
+          name: auth.currentUser!.email || 'User Account',
+          account: `${fromAsset} Wallet`,
+          type: 'Bitkub User'
+        };
+
+        const receiverInfo = {
+          name: auth.currentUser!.email || 'User Account',
+          account: `${toAsset} Wallet`,
+          type: 'Bitkub User'
+        };
+
         const newTxRef = doc(txCollectionRef);
         transaction.set(newTxRef, {
+          txId,
           type: 'CONVERT',
+          asset: `${fromAsset}➔${toAsset}`,
+          amount: numAmount,
           fromAsset,
           toAsset,
           fromAmount: numAmount,
           toAmount,
+          fee: 0,
           status: 'COMPLETED',
-          timestamp: new Date().toISOString()
+          timestamp: now.toISOString(),
+          dateStr,
+          timeStr,
+          senderInfo,
+          receiverInfo
         });
       });
 
@@ -203,6 +263,7 @@ const TradeScreen = memo(() => {
         [toAsset]: prev[toAsset] + toAmount
       }));
 
+      triggerHaptic('success');
       setStatus({
         type: 'success',
         title: 'Conversion Success',
@@ -211,6 +272,7 @@ const TradeScreen = memo(() => {
       setConvertAmount('');
     } catch (error: any) {
       console.error("Convert error:", error);
+      triggerHaptic('error');
       setStatus({
         type: 'error',
         title: 'Conversion Failed',
@@ -237,7 +299,16 @@ const TradeScreen = memo(() => {
 
   return (
     <div className="flex-1 flex flex-col bg-[#0D1117] h-full overflow-hidden">
-      <header className="px-5 pt-4 pb-1 flex justify-between items-center">
+      <motion.header 
+        initial={false}
+        animate={{ 
+          y: isNavVisible ? 0 : -80, 
+          opacity: isNavVisible ? 1 : 0 
+        }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className="sticky top-2 z-50 mx-4 my-2 px-4 py-2 bg-[#0D1117]/80 backdrop-blur-2xl rounded-2xl border border-gray-800/80 shadow-2xl flex justify-between items-center"
+        style={{ pointerEvents: isNavVisible ? 'auto' : 'none' }}
+      >
         <div className="flex items-center gap-1.5 cursor-pointer group">
           <h1 className="text-lg font-black text-white tracking-tight uppercase">
             {activeTab === 'SPOT' ? 'KUB/THB' : 'Convert'}
@@ -276,7 +347,7 @@ const TradeScreen = memo(() => {
             Convert
           </button>
         </div>
-      </header>
+      </motion.header>
 
       <div className="flex-1 overflow-y-auto px-5 pb-24 pt-2 relative no-scrollbar">
         <AnimatePresence mode="wait">
@@ -462,12 +533,12 @@ const TradeScreen = memo(() => {
                   disabled={loading || !amount}
                   onClick={() => setShowConfirm(true)}
                   className={cn(
-                    "w-full py-3.5 rounded-xl font-black text-base shadow-xl transition-all disabled:opacity-50",
-                    side === 'BUY' ? "bg-[#00D632] text-black shadow-[#00D632]/20" : "bg-red-500 text-white shadow-red-500/20"
+                    "w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md transition-all disabled:opacity-50",
+                    side === 'BUY' ? "bg-[#00D632] text-black shadow-[#00D632]/20 hover:bg-[#00B62A]" : "bg-red-500 text-white shadow-red-500/20 hover:bg-red-600"
                   )}
                 >
                   {loading ? (
-                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto" />
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto" />
                   ) : (
                     `${side === 'BUY' ? t('buy') : t('sell')} KUB`
                   )}
@@ -600,7 +671,7 @@ const TradeScreen = memo(() => {
                 whileTap={{ scale: 0.96 }}
                 disabled={loading || !convertAmount}
                 onClick={() => setShowConfirm(true)}
-                className="w-full py-5 rounded-2xl bg-[#00D632] text-black font-black text-lg shadow-xl shadow-[#00D632]/20 disabled:opacity-50"
+                className="w-full py-2.5 rounded-xl bg-[#00D632] text-black font-bold text-xs uppercase tracking-wider shadow-md shadow-[#00D632]/20 disabled:opacity-50 hover:bg-[#00B62A] transition-all"
               >
                 {loading ? (
                   <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto" />

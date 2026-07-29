@@ -7,6 +7,7 @@ import { collection, query, where, getDocs, doc, runTransaction, serverTimestamp
 import { cn } from '@/src/lib/utils';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ASSETS_DATA } from '../../data';
+import { triggerHaptic } from '@/src/lib/haptics';
 
 interface SendMoneyProps {
   onBack: () => void;
@@ -79,11 +80,39 @@ export default function SendMoney({ onBack, onSuccess }: SendMoneyProps) {
         const senderTxRef = doc(collection(db, 'users', auth.currentUser!.uid, 'transactions'));
         const recipientTxRef = doc(collection(db, 'users', recipientUid, 'transactions'));
 
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let randomStr = '';
+        for (let i = 0; i < 8; i++) {
+          randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        const txId = `TX-${now.toISOString().slice(2, 10).replace(/-/g, '')}-${randomStr}`;
+
+        const senderInfo = {
+          name: auth.currentUser!.email || 'Sender User',
+          account: 'Bitkub Internal Wallet',
+          type: 'Bitkub User'
+        };
+
+        const receiverInfo = {
+          name: recipientEmail.toLowerCase().trim(),
+          account: 'Bitkub Internal Wallet',
+          type: 'Bitkub User'
+        };
+
         const commonTxData = {
+          txId,
           asset,
           amount: numAmount,
-          timestamp: serverTimestamp(),
+          fee: 0,
+          timestamp: now.toISOString(),
+          dateStr,
+          timeStr,
           type: 'TRANSFER',
+          senderInfo,
+          receiverInfo,
         };
 
         transaction.set(senderTxRef, {
@@ -101,6 +130,7 @@ export default function SendMoney({ onBack, onSuccess }: SendMoneyProps) {
         });
       });
 
+      triggerHaptic('success');
       setStatus({
         type: 'success',
         title: 'Transfer Successful',
@@ -108,6 +138,7 @@ export default function SendMoney({ onBack, onSuccess }: SendMoneyProps) {
       });
     } catch (err: any) {
       console.error("Transfer error:", err);
+      triggerHaptic('error');
       setError(err.message || 'Failed to send money');
       setStatus({
         type: 'error',
@@ -120,16 +151,16 @@ export default function SendMoney({ onBack, onSuccess }: SendMoneyProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-[#0D1117] z-50 flex flex-col">
-      <header className="px-5 py-6 flex items-center justify-between border-b border-gray-800">
-        <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
-          <ArrowLeft className="w-6 h-6" />
+    <div className="fixed inset-0 bg-[#0D1117] z-[150] flex flex-col overflow-y-auto no-scrollbar">
+      <header className="px-5 py-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-[#0D1117] z-10">
+        <button onClick={onBack} className="p-1.5 -ml-2 text-gray-400 hover:text-white transition-colors">
+          <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-lg font-black text-white uppercase tracking-widest">Send Money</h1>
-        <div className="w-10" />
+        <h1 className="text-base font-bold text-white uppercase tracking-wider">Send Money</h1>
+        <div className="w-8" />
       </header>
 
-      <div className="flex-1 overflow-y-auto px-5 py-8">
+      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-28">
         <AnimatePresence mode="wait">
           {step === 'DETAILS' ? (
             <motion.div
@@ -137,45 +168,45 @@ export default function SendMoney({ onBack, onSuccess }: SendMoneyProps) {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
+              className="space-y-5"
             >
-              <div className="bg-[#1A1F26] border border-gray-800 rounded-3xl p-6">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-12 bg-[#00D632]/10 rounded-2xl flex items-center justify-center text-[#00D632]">
-                    <Send className="w-6 h-6" />
+              <div className="bg-[#1A1F26] border border-gray-800 rounded-2xl p-5">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 bg-[#00D632]/10 rounded-xl flex items-center justify-center text-[#00D632]">
+                    <Send className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-white font-bold uppercase tracking-tight">Internal Transfer</h2>
-                    <p className="text-xs text-gray-500 font-medium">Send instantly to any Bitkub user</p>
+                    <h2 className="text-white text-sm font-bold uppercase tracking-tight">Internal Transfer</h2>
+                    <p className="text-[11px] text-gray-500 font-medium">Send instantly to any Bitkub user</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block ml-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 block ml-1">
                       Recipient Email
                     </label>
                     <div className="relative">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                       <input 
                         type="email"
                         value={recipientEmail}
                         onChange={(e) => setRecipientEmail(e.target.value)}
                         placeholder="user@email.com"
-                        className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl py-4 pl-12 pr-4 text-white font-bold placeholder:text-gray-600 focus:border-[#00D632]/50 outline-none transition-all"
+                        className="w-full bg-gray-900/50 border border-gray-800 rounded-xl py-3 pl-10 pr-4 text-white text-sm font-bold placeholder:text-gray-600 focus:border-[#00D632]/50 outline-none transition-all"
                       />
                     </div>
                   </div>
 
-                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                     {Object.keys(ASSETS_DATA).map((sym) => (
                       <button
                         key={sym}
                         onClick={() => setAsset(sym)}
                         className={cn(
-                          "px-4 py-2 rounded-xl border font-bold text-[10px] uppercase tracking-wider transition-all flex-shrink-0",
+                          "px-3 py-1.5 rounded-lg border font-bold text-[9px] uppercase tracking-wider transition-all flex-shrink-0",
                           asset === sym 
-                            ? "bg-[#00D632] border-[#00D632] text-black shadow-[0_0_15px_rgba(0,214,50,0.3)]"
+                            ? "bg-[#00D632] border-[#00D632] text-black shadow-[0_0_10px_rgba(0,214,50,0.3)]"
                             : "bg-gray-900/50 border-gray-800 text-gray-400 hover:border-gray-700"
                         )}
                       >
@@ -185,7 +216,7 @@ export default function SendMoney({ onBack, onSuccess }: SendMoneyProps) {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block ml-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 block ml-1">
                       Amount to Send
                     </label>
                     <div className="relative">
@@ -194,9 +225,9 @@ export default function SendMoney({ onBack, onSuccess }: SendMoneyProps) {
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         placeholder="0.00"
-                        className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl py-6 px-4 text-center text-3xl font-black text-white placeholder:text-gray-800 outline-none focus:border-[#00D632]/50 transition-all"
+                        className="w-full bg-gray-900/50 border border-gray-800 rounded-xl py-4 px-4 text-center text-2xl font-bold text-white placeholder:text-gray-800 outline-none focus:border-[#00D632]/50 transition-all"
                       />
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-bold">
                         {asset}
                       </div>
                     </div>
@@ -206,7 +237,7 @@ export default function SendMoney({ onBack, onSuccess }: SendMoneyProps) {
                     <motion.div 
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="flex items-center gap-2 text-red-500 bg-red-500/10 p-4 rounded-xl border border-red-500/20"
+                      className="flex items-center gap-2 text-red-500 bg-red-500/10 p-3 rounded-xl border border-red-500/20"
                     >
                       <AlertCircle className="w-4 h-4" />
                       <span className="text-[10px] font-bold uppercase tracking-wider">{error}</span>
@@ -219,15 +250,15 @@ export default function SendMoney({ onBack, onSuccess }: SendMoneyProps) {
                 disabled={loading}
                 onClick={handleSend}
                 className={cn(
-                  "w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition-all shadow-lg",
-                  loading ? "bg-gray-800 text-gray-600" : "bg-[#00D632] text-black active:scale-95 shadow-[#00D632]/20"
+                  "w-full py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all shadow-md",
+                  loading ? "bg-gray-800 text-gray-600" : "bg-[#00D632] text-black active:scale-95 shadow-[#00D632]/20 hover:bg-[#00B62A]"
                 )}
               >
                 {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
-                    <Send className="w-5 h-5" />
+                    <Send className="w-4 h-4" />
                     Confirm Transfer
                   </>
                 )}

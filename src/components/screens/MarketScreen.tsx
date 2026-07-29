@@ -3,6 +3,7 @@ import { Search, ChevronRight, TrendingUp } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useNavScroll } from '../../contexts/NavScrollContext';
 import Skeleton from '../Skeleton';
 
 const MARKET_PAIRS = [
@@ -15,6 +16,7 @@ const MARKET_PAIRS = [
 
 const MarketScreen = memo(() => {
   const { t } = useLanguage();
+  const { isNavVisible } = useNavScroll();
   const [activeTab, setActiveTab] = useState('THB Pairs');
   const [loading, setLoading] = useState(true);
 
@@ -36,12 +38,21 @@ const MarketScreen = memo(() => {
 
   return (
     <div className="flex-1 flex flex-col bg-[#0D1117] h-full overflow-hidden">
-      <header className="px-5 pt-4 pb-2 flex justify-between items-center">
+      <motion.header 
+        initial={false}
+        animate={{ 
+          y: isNavVisible ? 0 : -80, 
+          opacity: isNavVisible ? 1 : 0 
+        }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className="sticky top-2 z-50 mx-4 my-2 px-4 py-2 bg-[#0D1117]/80 backdrop-blur-2xl rounded-2xl border border-gray-800/80 shadow-2xl flex justify-between items-center"
+        style={{ pointerEvents: isNavVisible ? 'auto' : 'none' }}
+      >
         <h1 className="text-lg font-bold text-white tracking-tight uppercase">{t('market_title')}</h1>
         <button className="p-1.5 rounded-full hover:bg-gray-800 text-gray-400">
           <Search className="w-4 h-4" />
         </button>
-      </header>
+      </motion.header>
 
       <div className="px-5 mb-2 overflow-x-auto no-scrollbar flex items-center gap-4 border-b border-gray-800/50">
         {tabs.map((tab) => (

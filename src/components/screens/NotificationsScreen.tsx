@@ -107,8 +107,24 @@ export default function NotificationsScreen({ onBack }: NotificationsScreenProps
           }
         }
 
+        // 3. Fetch Admin Notifications
+        const adminNotifRef = collection(db, 'users', userUid, 'admin_notifications');
+        const adminNotifSnap = await getDocs(query(adminNotifRef, orderBy('createdAt', 'desc')));
+        const adminNotifications: NotificationItem[] = adminNotifSnap.docs.map(doc => {
+          const data = doc.data();
+          const dateObj = new Date(data.createdAt || Date.now());
+          return {
+            id: doc.id,
+            type: 'SYSTEM',
+            title: data.title || 'Official Notice',
+            message: data.message || '',
+            timestamp: { seconds: Math.floor(dateObj.getTime() / 1000) },
+            status: 'INFO'
+          };
+        });
+
         // Combine and sort
-        const all = [...kycNotifications, ...txNotifications].sort((a, b) => {
+        const all = [...adminNotifications, ...kycNotifications, ...txNotifications].sort((a, b) => {
           const timeA = a.timestamp?.seconds || 0;
           const timeB = b.timestamp?.seconds || 0;
           return timeB - timeA;

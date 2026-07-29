@@ -74,7 +74,7 @@ const PortfolioCard = memo(({
           </div>
 
           <div className="w-20 h-10 mb-1">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <LineChart data={TREND_DATA}>
                 <Line 
                   type="monotone" 

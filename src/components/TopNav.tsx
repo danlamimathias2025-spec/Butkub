@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Bell, QrCode, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useNavScroll } from '../contexts/NavScrollContext';
 import { cn } from '@/src/lib/utils';
 
 interface TopNavProps {
@@ -10,9 +11,19 @@ interface TopNavProps {
 
 const TopNav = memo(({ onNotificationsClick }: TopNavProps) => {
   const { language, setLanguage } = useLanguage();
+  const { isNavVisible } = useNavScroll();
 
   return (
-    <nav className="flex items-center justify-between px-5 pt-3 pb-2 bg-[#0D1117] sticky top-0 z-50">
+    <motion.nav 
+      initial={false}
+      animate={{ 
+        y: isNavVisible ? 0 : -80, 
+        opacity: isNavVisible ? 1 : 0 
+      }}
+      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      className="sticky top-2 z-50 mx-4 my-2 px-4 py-2 bg-[#0D1117]/80 backdrop-blur-2xl rounded-2xl border border-gray-800/80 shadow-2xl flex items-center justify-between"
+      style={{ pointerEvents: isNavVisible ? 'auto' : 'none' }}
+    >
       <div className="relative">
         <div className="w-8 h-8 rounded-full bg-gray-700 overflow-hidden border border-gray-600 flex items-center justify-center">
           <img 
@@ -67,7 +78,7 @@ const TopNav = memo(({ onNotificationsClick }: TopNavProps) => {
           <QrCode className="w-5 h-5" />
         </motion.button>
       </div>
-    </nav>
+    </motion.nav>
   );
 });
 

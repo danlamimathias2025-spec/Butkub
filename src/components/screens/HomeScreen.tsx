@@ -15,8 +15,10 @@ import NotificationsScreen from './NotificationsScreen';
 import KYCScreen from '../auth/KYCScreen';
 import Skeleton from '../Skeleton';
 import { ASSETS_DATA } from '../../data';
+import { useNavScroll } from '../../contexts/NavScrollContext';
 
 export default function HomeScreen() {
+  const { isNavVisible } = useNavScroll();
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showSend, setShowSend] = useState(false);
@@ -175,10 +177,16 @@ export default function HomeScreen() {
         target="_blank"
         rel="noopener noreferrer"
         initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
+        animate={{ 
+          scale: isNavVisible ? 1 : 0, 
+          opacity: isNavVisible ? 1 : 0,
+          y: isNavVisible ? 0 : 20
+        }}
+        transition={{ duration: 0.25 }}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         className="fixed bottom-20 right-5 w-12 h-12 bg-[#00D632] rounded-full flex items-center justify-center shadow-2xl shadow-[#00D632]/40 z-[100] border-4 border-[#0D1117]"
+        style={{ pointerEvents: isNavVisible ? 'auto' : 'none' }}
       >
         <MessageCircle className="w-5 h-5 text-black" />
         <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0D1117] animate-pulse" />

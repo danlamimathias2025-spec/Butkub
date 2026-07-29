@@ -180,7 +180,7 @@ export default function LoginScreen({ onClose, onSignUp, onSuccess, initialEmail
           <motion.button
             whileTap={{ scale: 0.98 }}
             disabled={loading}
-            className="w-full py-4 rounded-2xl bg-[#00D632] text-black font-black text-lg shadow-[0_10px_30px_rgba(0,214,50,0.2)] disabled:opacity-50"
+            className="w-full py-2.5 rounded-xl bg-[#00D632] text-black font-bold text-xs uppercase tracking-wider shadow-[0_6px_20px_rgba(0,214,50,0.2)] disabled:opacity-50 hover:bg-[#00B62A] transition-all"
           >
             {loading ? t('logging_in') : t('login_button')}
           </motion.button>
@@ -189,9 +189,9 @@ export default function LoginScreen({ onClose, onSignUp, onSuccess, initialEmail
         <div className="flex flex-col gap-4">
            <motion.button
             whileTap={{ scale: 0.98 }}
-            className="w-full py-4 rounded-2xl bg-gray-800 text-white font-bold flex items-center justify-center gap-3 border border-gray-700"
+            className="w-full py-2.5 rounded-xl bg-gray-800 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-gray-700 hover:bg-gray-700 transition-all"
           >
-            <Key className="w-5 h-5" />
+            <Key className="w-4 h-4" />
             {t('login_with_passkey')}
           </motion.button>
           <p className="text-center text-xs text-gray-500 px-4">

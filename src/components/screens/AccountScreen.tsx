@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut, ChevronRight, ShieldCheck, Lock, UserCheck, CreditCard, Code, History, HelpCircle, Globe, CheckCircle, AlertCircle } from 'lucide-react';
+import { LogOut, ChevronRight, ShieldCheck, Lock, UserCheck, CreditCard, Code, History, HelpCircle, Globe, CheckCircle, AlertCircle, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db } from '@/src/lib/firebase';
 import { signOut } from 'firebase/auth';
@@ -7,12 +7,16 @@ import { doc, getDoc } from 'firebase/firestore';
 import { cn } from '@/src/lib/utils';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
+import { useNavScroll } from '../../contexts/NavScrollContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import TransactionHistory from '../account/TransactionHistory';
 import AdminDashboard from '../admin/AdminDashboard';
 
 export default function AccountScreen() {
   const { t, language, setLanguage } = useLanguage();
   const { currency, setCurrency } = useCurrency();
+  const { isNavVisible } = useNavScroll();
+  const { theme, toggleTheme, isDark } = useTheme();
   const [showHistory, setShowHistory] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showKYCModal, setShowKYCModal] = useState(false);
@@ -59,6 +63,13 @@ export default function AccountScreen() {
     },
     { icon: Lock, label: t('security') },
     { icon: History, label: t('history'), action: () => setShowHistory(true) },
+    { 
+      icon: isDark ? Moon : Sun, 
+      label: 'Theme Mode', 
+      detail: isDark ? 'Premium Dark' : 'High-Contrast Light',
+      action: () => toggleTheme(),
+      isToggle: true
+    },
     { 
       icon: Globe, 
       label: t('language'), 
@@ -143,7 +154,16 @@ export default function AccountScreen() {
         )}
       </AnimatePresence>
 
-      <header className="px-5 pt-4 pb-2 flex justify-between items-center">
+      <motion.header 
+        initial={false}
+        animate={{ 
+          y: isNavVisible ? 0 : -80, 
+          opacity: isNavVisible ? 1 : 0 
+        }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className="sticky top-2 z-50 mx-4 my-2 px-4 py-2 bg-[#0D1117]/80 backdrop-blur-2xl rounded-2xl border border-gray-800/80 shadow-2xl flex justify-between items-center"
+        style={{ pointerEvents: isNavVisible ? 'auto' : 'none' }}
+      >
         <h1 className="text-lg font-bold text-white tracking-tight uppercase">{t('account')}</h1>
         <button 
           onClick={handleLogout}
@@ -151,7 +171,7 @@ export default function AccountScreen() {
         >
           <LogOut className="w-4 h-4" />
         </button>
-      </header>
+      </motion.header>
 
       <div className="flex-1 overflow-y-auto px-5 pb-24">
         {/* User Info Header */}
@@ -235,7 +255,25 @@ export default function AccountScreen() {
                   {item.detail && <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">{item.detail}</span>}
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-700 group-hover:text-gray-400" />
+              {item.isToggle ? (
+                <div className={cn(
+                  "w-11 h-6 rounded-full p-0.5 flex items-center transition-colors cursor-pointer",
+                  !isDark ? "bg-[#00D632]" : "bg-gray-700"
+                )}>
+                  <motion.div 
+                    layout
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    className={cn(
+                      "w-5 h-5 rounded-full flex items-center justify-center text-xs shadow-md",
+                      !isDark ? "ml-auto bg-black text-[#00D632]" : "bg-white text-gray-900"
+                    )}
+                  >
+                    {!isDark ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
+                  </motion.div>
+                </div>
+              ) : (
+                <ChevronRight className="w-4 h-4 text-gray-700 group-hover:text-gray-400" />
+              )}
             </motion.button>
           ))}
         </div>

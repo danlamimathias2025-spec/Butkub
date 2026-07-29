@@ -6,6 +6,7 @@ import StatusOverlay from '../StatusOverlay';
 import { auth, db } from '../../lib/firebase';
 import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
 import { cn } from '@/src/lib/utils';
+import { triggerHaptic } from '@/src/lib/haptics';
 
 interface DepositTHBProps {
   onBack: () => void;
@@ -48,29 +49,29 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 20 }}
-        className="absolute inset-0 bg-[#0D1117] z-[60] flex flex-col p-5"
+        className="absolute inset-0 bg-[#0D1117] z-[60] flex flex-col p-5 overflow-y-auto no-scrollbar"
       >
-        <header className="pt-6 pb-4 flex items-center gap-4">
-          <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
-            <ArrowLeft className="w-6 h-6" />
+        <header className="pt-4 pb-3 flex items-center gap-4">
+          <button onClick={onBack} className="p-1.5 -ml-2 text-gray-400 hover:text-white transition-colors">
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-bold text-white tracking-tight uppercase">Identity Verification</h1>
+          <h1 className="text-lg font-bold text-white tracking-tight uppercase">Identity Verification</h1>
         </header>
         <div className="flex-1 flex flex-col items-center justify-center text-center">
-          <div className="w-20 h-20 bg-yellow-500/10 rounded-3xl flex items-center justify-center text-yellow-500 mb-6">
-             <Landmark className="w-10 h-10" />
+          <div className="w-16 h-16 bg-yellow-500/10 rounded-2xl flex items-center justify-center text-yellow-500 mb-4">
+             <Landmark className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-black text-white mb-3">
+          <h2 className="text-xl font-bold text-white mb-2">
             {kycStatus === 'PENDING' ? 'Verification Pending' : 'Verification Required'}
           </h2>
-          <p className="text-gray-400 font-medium mb-8 max-w-xs">
+          <p className="text-gray-400 font-medium mb-6 text-xs max-w-xs leading-relaxed">
             {kycStatus === 'PENDING' 
               ? 'Your identity verification is currently being reviewed by our team. You will be able to deposit once approved.' 
               : 'Please complete your identity verification (KYC) to enable THB deposits and withdrawals.'}
           </p>
           <button 
             onClick={onBack}
-            className="w-full py-4 bg-[#00D632] text-black font-black rounded-2xl uppercase tracking-widest shadow-lg shadow-[#00D632]/20"
+            className="w-full py-2.5 bg-[#00D632] text-black font-bold text-xs rounded-xl uppercase tracking-wider shadow-md shadow-[#00D632]/20 hover:bg-[#00B62A] transition-all"
           >
             Go to Account
           </button>
@@ -96,24 +97,54 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
       const userRef = auth.currentUser?.uid;
       
       if (userRef) {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let randomStr = '';
+        for (let i = 0; i < 8; i++) {
+          randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        const txId = `TX-${now.toISOString().slice(2, 10).replace(/-/g, '')}-${randomStr}`;
+
+        const senderInfo = {
+          name: method === 'promptpay' ? 'Thai QR PromptPay' : method === 'bank' ? 'Bank Wire Transfer' : 'Gift Card Voucher',
+          account: generatedCode ? `Code: ${generatedCode}` : 'Deposit Provider',
+          type: 'Payment Method'
+        };
+
+        const receiverInfo = {
+          name: auth.currentUser?.email || 'User Account',
+          account: 'Bitkub THB Wallet',
+          type: 'Bitkub User'
+        };
+
         const txRef = doc(collection(db, 'users', userRef, 'transactions'));
         await setDoc(txRef, {
+          txId,
           type: 'DEPOSIT',
           method: method.toUpperCase(),
           asset: 'THB',
           amount: depositAmount,
+          fee: 0,
           status: 'PENDING',
           payCode: generatedCode,
           giftCardImage: giftCardImage, // Base64 or URL
-          timestamp: new Date().toISOString(),
+          timestamp: now.toISOString(),
+          dateStr,
+          timeStr,
+          senderInfo,
+          receiverInfo,
           userEmail: auth.currentUser?.email,
           userId: auth.currentUser?.uid
         });
       }
 
+      triggerHaptic('success');
       setShowConfirmation(true);
     } catch (error: any) {
       console.error("Deposit error:", error);
+      triggerHaptic('error');
       setStatus({
         type: 'error',
         title: 'Request Failed',
@@ -125,6 +156,7 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
   };
 
   const copyToClipboard = (text: string) => {
+    triggerHaptic('light');
     navigator.clipboard.writeText(text);
   };
 
@@ -144,9 +176,9 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      className="absolute inset-0 bg-[#0D1117] z-[60] flex flex-col"
+      className="fixed inset-0 bg-[#0D1117] z-[150] flex flex-col"
     >
-      <header className="px-5 pt-6 pb-4 flex items-center justify-between">
+      <header className="px-5 pt-6 pb-4 flex items-center justify-between sticky top-0 bg-[#0D1117] z-10">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="p-2 rounded-full hover:bg-gray-800 text-gray-400">
             <ArrowLeft className="w-6 h-6" />
@@ -158,7 +190,7 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-24">
+      <div className="flex-1 overflow-y-auto px-5 pb-28">
         {/* Method Selector */}
         <div className="grid grid-cols-3 gap-2 mb-8">
           <div className="relative group cursor-not-allowed">
@@ -285,7 +317,7 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
                 whileTap={{ scale: 0.98 }}
                 disabled={!amount || loading || !giftCardImage}
                 onClick={handleDepositRequest}
-                className="w-full py-4 rounded-2xl bg-[#00D632] text-black font-black text-lg shadow-[0_10px_30px_rgba(0,214,50,0.2)] disabled:opacity-50 disabled:shadow-none transition-all"
+                className="w-full py-2.5 rounded-xl bg-[#00D632] text-black font-bold text-xs uppercase tracking-wider shadow-[0_6px_20px_rgba(0,214,50,0.2)] disabled:opacity-50 disabled:shadow-none transition-all"
               >
                 {loading ? 'Processing...' : 'Submit Deposit Request'}
               </motion.button>
@@ -301,27 +333,27 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/95 z-[70] flex flex-col p-5"
+            className="fixed inset-0 bg-black/95 z-[70] flex flex-col p-5 overflow-y-auto no-scrollbar"
           >
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <div className="w-20 h-20 bg-[#00D632]/10 rounded-full flex items-center justify-center text-[#00D632] mb-6 shadow-[0_0_40px_rgba(0,214,50,0.2)]">
-                <Check className="w-10 h-10" />
+            <div className="flex-1 flex flex-col items-center justify-center text-center my-auto">
+              <div className="w-16 h-16 bg-[#00D632]/10 rounded-full flex items-center justify-center text-[#00D632] mb-4 shadow-[0_0_30px_rgba(0,214,50,0.2)]">
+                <Check className="w-8 h-8" />
               </div>
               
-              <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Request Submitted</h2>
-              <p className="text-gray-400 font-medium mb-8 max-w-xs">
+              <h2 className="text-xl font-bold text-white mb-2 uppercase tracking-tight">Request Submitted</h2>
+              <p className="text-gray-400 font-medium mb-6 text-xs max-w-xs">
                 Your deposit request of <span className="text-white">฿{parseFloat(amount).toLocaleString()}</span> has been logged.
               </p>
 
-              <div className="w-full bg-gray-900 border border-gray-800 rounded-3xl p-6 mb-8">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">Your Unique Paycode</p>
-                <div className="flex items-center justify-between gap-4 bg-black/40 p-4 rounded-2xl border border-white/5 mb-4 group">
-                  <span className="text-2xl font-black text-[#00D632] tracking-widest font-mono">{payCode}</span>
+              <div className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 mb-6">
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Your Unique Paycode</p>
+                <div className="flex items-center justify-between gap-3 bg-black/40 p-3 rounded-xl border border-white/5 mb-3 group">
+                  <span className="text-xl font-black text-[#00D632] tracking-widest font-mono">{payCode}</span>
                   <button 
                     onClick={() => copyToClipboard(payCode)}
-                    className="p-3 bg-white/5 rounded-xl text-gray-400 hover:text-white transition-colors"
+                    className="p-2 bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"
                   >
-                    <Copy className="w-5 h-5" />
+                    <Copy className="w-4 h-4" />
                   </button>
                 </div>
                 <p className="text-[9px] text-yellow-500/80 font-bold uppercase leading-relaxed">
@@ -329,28 +361,28 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
                 </p>
               </div>
 
-              <div className="space-y-3 w-full">
+              <div className="space-y-2.5 w-full">
                 <a 
                   href="https://t.me/kt_johnson"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-4 rounded-2xl bg-[#229ED9] text-white font-black flex items-center justify-center gap-3 shadow-xl shadow-blue-500/20"
+                  className="w-full py-2.5 rounded-xl bg-[#229ED9] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
                 >
-                  <Send className="w-5 h-5" /> Message Admin on Telegram
+                  <Send className="w-4 h-4" /> Message Admin on Telegram
                 </a>
                 <button 
                   onClick={() => {
                     setShowConfirmation(false);
                     onSuccess();
                   }}
-                  className="w-full py-4 rounded-2xl bg-white/5 text-gray-400 font-black flex items-center justify-center gap-2 hover:bg-white/10 transition-colors"
+                  className="w-full py-2.5 rounded-xl bg-white/5 text-gray-400 font-bold text-xs flex items-center justify-center gap-2 hover:bg-white/10 transition-colors"
                 >
                   Close & View History
                 </button>
               </div>
             </div>
             
-            <p className="text-center text-[10px] text-gray-500 font-medium px-10 mb-8 italic">
+            <p className="text-center text-[10px] text-gray-500 font-medium px-6 my-4 italic">
               "Your security is our priority. Always use official links."
             </p>
           </motion.div>

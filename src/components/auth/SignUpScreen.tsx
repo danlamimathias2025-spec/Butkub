@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, CheckCircle2, Circle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Circle, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
 import StatusOverlay from '../StatusOverlay';
 import { auth, db } from '@/src/lib/firebase';
@@ -19,6 +19,8 @@ export default function SignUpScreen({ onBack, onSuccess, initialEmail = '' }: S
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
@@ -26,20 +28,14 @@ export default function SignUpScreen({ onBack, onSuccess, initialEmail = '' }: S
   const WELCOME_BONUS_THB = 180; // Approx $5
   const ADMIN_EMAIL = 'danlamimathias2025@gmail.com';
 
-  const requirements = [
-    { label: t('req_len'), met: password.length >= 12 },
-    { label: t('req_case'), met: /[a-z]/.test(password) && /[A-Z]/.test(password) },
-    { label: t('req_num'), met: /[0-9]/.test(password) && /[^a-zA-Z0-9]/.test(password) },
-  ];
-
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
+    if (!password) {
+      setError('Please enter a password');
       return;
     }
-    if (!requirements.every(r => r.met)) {
-      setError('Password requirements not met');
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
@@ -93,7 +89,7 @@ export default function SignUpScreen({ onBack, onSuccess, initialEmail = '' }: S
         errorMessage = 'Please enter a valid email address.';
         setError(errorMessage);
       } else if (err.code === 'auth/weak-password') {
-        errorMessage = 'Password is too weak.';
+        errorMessage = 'Password should be at least 6 characters.';
         setError(errorMessage);
       } else if (err.code === 'auth/network-request-failed') {
         errorMessage = 'Network error. Please check your connection.';
@@ -159,42 +155,51 @@ export default function SignUpScreen({ onBack, onSuccess, initialEmail = '' }: S
 
         <div className="space-y-2">
           <label className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">{t('password_label')}</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Create a strong password"
-            className="w-full bg-gray-800/20 border border-gray-800 rounded-xl px-4 py-4 text-white placeholder:text-gray-700 focus:outline-none focus:border-[#00D632]/50 transition-colors"
-            required
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
+              className="w-full bg-gray-800/20 border border-gray-800 rounded-xl px-4 py-4 pr-12 text-white placeholder:text-gray-700 focus:outline-none focus:border-[#00D632]/50 transition-colors"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors p-1"
+            >
+              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
 
         <div className="space-y-2">
           <label className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">{t('confirmPassword_label') || 'Confirm Password'}</label>
-          <input
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Re-enter password"
-            className="w-full bg-gray-800/20 border border-gray-800 rounded-xl px-4 py-4 text-white placeholder:text-gray-700 focus:outline-none focus:border-[#00D632]/50 transition-colors"
-            required
-          />
+          <div className="relative">
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Re-enter password"
+              className="w-full bg-gray-800/20 border border-gray-800 rounded-xl px-4 py-4 pr-12 text-white placeholder:text-gray-700 focus:outline-none focus:border-[#00D632]/50 transition-colors"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors p-1"
+            >
+              {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
 
-        <div className="space-y-3 bg-gray-800/20 rounded-2xl p-4 border border-gray-800">
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{t('password_req')}</p>
-          {requirements.map((req) => (
-            <div key={req.label} className="flex items-center gap-3">
-              {req.met ? (
-                <CheckCircle2 className="w-4 h-4 text-[#00D632]" />
-              ) : (
-                <Circle className="w-4 h-4 text-gray-700" />
-              )}
-              <span className={cn("text-xs transition-colors", req.met ? "text-[#00D632]" : "text-gray-500")}>
-                {req.label}
-              </span>
-            </div>
-          ))}
+        <div className="bg-gray-800/20 rounded-2xl p-4 border border-gray-800/60 flex items-center gap-3">
+          <CheckCircle2 className="w-4 h-4 text-[#00D632] shrink-0" />
+          <p className="text-xs text-gray-400">
+            Create any custom password. Passwords may include any length, numbers, letters, or symbols.
+          </p>
         </div>
 
         <div className="space-y-4 px-1">
@@ -231,7 +236,7 @@ export default function SignUpScreen({ onBack, onSuccess, initialEmail = '' }: S
           whileTap={{ scale: 0.98 }}
           disabled={loading}
           type="submit"
-          className="w-full py-4 rounded-2xl bg-[#00D632] text-black font-black text-lg shadow-[0_10px_30px_rgba(0,214,50,0.2)] disabled:opacity-50"
+          className="w-full py-2.5 rounded-xl bg-[#00D632] text-black font-bold text-xs uppercase tracking-wider shadow-[0_6px_20px_rgba(0,214,50,0.2)] disabled:opacity-50 hover:bg-[#00B62A] transition-all"
         >
           {loading ? t('creating_account') : t('signup_button')}
         </motion.button>

@@ -154,7 +154,7 @@ const MarketRow = memo(({ pair, index, t, format }: { pair: MarketPair, index: n
     </div>
 
     <div className="flex-1 px-4 max-w-[100px]">
-      <ResponsiveContainer width="100%" height={24}>
+      <ResponsiveContainer width="100%" height={24} minWidth={0} minHeight={0}>
         <LineChart data={pair.data}>
           <Line 
             type="monotone" 

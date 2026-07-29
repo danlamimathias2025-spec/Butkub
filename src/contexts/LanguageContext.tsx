@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Language = 'EN' | 'TH';
 
@@ -21,6 +21,8 @@ const translations: Translations = {
   portfolio_value: { EN: 'Total Portfolio Value', TH: 'มูลค่าพอร์ตทั้งหมด' },
   buy_sell: { EN: 'Buy/Sell', TH: 'ซื้อ/ขาย' },
   promptpay: { EN: 'PromptPay', TH: 'พร้อมเพย์' },
+  quick_transfer: { EN: 'Quick Send', TH: 'โอนเงินด่วน' },
+  recent_activity: { EN: 'Recent Activity', TH: 'กิจกรรมล่าสุด' },
 
   // Market
   market_title: { EN: 'MARKET', TH: 'ตลาด' },
@@ -45,12 +47,14 @@ const translations: Translations = {
   total: { EN: 'Total', TH: 'รวมทั้งหมด' },
   order_book: { EN: 'Order Book', TH: 'สมุดคำสั่งซื้อขาย' },
   spread: { EN: 'Spread', TH: 'ส่วนต่าง' },
+  convert: { EN: 'Convert Asset', TH: 'แปลงสินทรัพย์' },
 
   // Wallet
   estimated_value: { EN: 'Estimated Asset Value', TH: 'มูลค่าสินทรัพย์โดยประมาณ' },
   available_balance: { EN: 'Available Balance', TH: 'ยอดเงินที่ใช้ได้' },
-  deposit: { EN: 'Deposit', TH: 'ฝาก' },
-  withdraw: { EN: 'Withdraw', TH: 'ถอน' },
+  deposit: { EN: 'Deposit', TH: 'ฝากเงิน' },
+  withdraw: { EN: 'Withdraw', TH: 'ถอนเงิน' },
+  send: { EN: 'Send Money', TH: 'โอนเงิน' },
   assets: { EN: 'Assets', TH: 'สินทรัพย์' },
 
   // Account
@@ -63,6 +67,7 @@ const translations: Translations = {
   history: { EN: 'Transaction History', TH: 'ประวัติการทำรายการ' },
   help: { EN: 'Help Center / Support', TH: 'ศูนย์ช่วยเหลือ / สนับสนุน' },
   language: { EN: 'Language Settings', TH: 'การตั้งค่าภาษา' },
+  admin_dashboard: { EN: 'Admin Dashboard', TH: 'แผงควบคุมผู้ดูแลระบบ' },
 
   // Transaction History
   loading_history: { EN: 'Loading History...', TH: 'กำลังโหลดประวัติ...' },
@@ -129,6 +134,7 @@ const translations: Translations = {
   instant_24: { EN: 'Instant to 24 hrs', TH: 'ทันที - 24 ชม.' },
   bank_transfer: { EN: 'Bank Transfer / Upload Slip', TH: 'โอนเงินธนาคาร / อัปโหลดสลิป' },
   time_30m_3d: { EN: '30 mins - 3 days', TH: '30 นาที - 3 วัน' },
+  giftcard_deposit: { EN: 'Gift Card / Voucher Deposit', TH: 'ฝากเงินด้วยบัตรของขวัญ / วอเชอร์' },
   deposit_amount: { EN: 'Deposit Amount (THB)', TH: 'จำนวนเงินที่ฝาก (THB)' },
   deposit_rules: { EN: 'I understand that each QR code is single-use only and must be scanned from my registered bank account.', TH: 'ฉันเข้าใจว่า QR code แต่ละรหัสใช้ได้เพียงครั้งเดียวและต้องสแกนจากบัญชีธนาคารที่ลงทะเบียนไว้ของฉัน' },
   generate_qr: { EN: 'GENERATE QR CODE', TH: 'สร้าง QR CODE' },
@@ -147,6 +153,11 @@ const translations: Translations = {
   processing_time: { EN: 'Estimated Processing Time: 1 - 3 Business Days', TH: 'ระยะเวลาดำเนินการโดยประมาณ: 1 - 3 วันทำการ' },
   confirm_withdraw: { EN: 'CONFIRM WITHDRAWAL', TH: 'ยืนยันการถอนเงิน' },
   enter_2fa: { EN: 'Enter 2FA Code to authorize this withdrawal', TH: 'กรอกรหัส 2FA เพื่ออนุมัติการถอนเงินนี้' },
+
+  // Notifications
+  notifications: { EN: 'Notifications', TH: 'การแจ้งเตือน' },
+  mark_all_read: { EN: 'Mark all as read', TH: 'ทำเครื่องหมายอ่านแล้วทั้งหมด' },
+  no_notifications: { EN: 'No Notifications', TH: 'ไม่มีการแจ้งเตือน' },
 };
 
 interface LanguageContextType {
@@ -157,14 +168,35 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+const STORAGE_KEY = 'bitkub_app_language';
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>('TH');
+  const [language, setLanguageState] = useState<Language>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved === 'EN' || saved === 'TH') {
+        return saved;
+      }
+    } catch {
+      // Fallback if localStorage unavailable
+    }
+    return 'TH';
+  });
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang);
+    try {
+      localStorage.setItem(STORAGE_KEY, lang);
+    } catch {
+      // Ignore storage errors
+    }
+  };
 
   const t = (key: string, params?: { [key: string]: any }) => {
-    let text = translations[key]?.[language] || key;
+    let text = translations[key]?.[language] || translations[key]?.['EN'] || key;
     if (params) {
       Object.keys(params).forEach(param => {
-        text = text.replace(`{${param}}`, params[param]);
+        text = text.replace(`{${param}}`, String(params[param]));
       });
     }
     return text;

@@ -59,11 +59,11 @@ export default function TwoFactorScreen({ onBack, onSuccess }: TwoFactorScreenPr
         </div>
       </div>
 
-      <div className="pb-8">
+      <div className="pb-6">
         <motion.button
           whileTap={{ scale: 0.98 }}
           onClick={onSuccess}
-          className="w-full py-4 rounded-2xl bg-[#00D632] text-black font-black text-lg shadow-[0_10px_30px_rgba(0,214,50,0.2)]"
+          className="w-full py-2.5 rounded-xl bg-[#00D632] text-black font-bold text-xs uppercase tracking-wider shadow-[0_6px_20px_rgba(0,214,50,0.2)] hover:bg-[#00B62A] transition-all"
         >
           VERIFY & PROCEED
         </motion.button>

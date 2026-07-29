@@ -1,1 +1,118 @@
 @import "tailwindcss";
+
+@layer base {
+  body {
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+}
+
+/* High-Contrast Light Mode Styles */
+.light {
+  color-scheme: light;
+}
+
+.light,
+.light body {
+  background-color: #F3F5F8 !important;
+  color: #0F172A !important;
+}
+
+/* Background overrides in light mode */
+.light .bg-\[\#0D1117\],
+.light .bg-\[\#0d1117\],
+.light .bg-\[\#1A1F26\],
+.light .bg-\[\#1a1f26\],
+.light .bg-\[\#0a0d12\] {
+  background-color: #FFFFFF !important;
+}
+
+.light .bg-[#0D1117]\/80,
+.light .bg-[#0d1117]\/80 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.light .bg-gray-900,
+.light .bg-gray-900\/50,
+.light .bg-gray-900\/60,
+.light .bg-gray-900\/80,
+.light .bg-gray-800,
+.light .bg-gray-800\/80,
+.light .bg-gray-800\/50,
+.light .bg-gray-800\/40,
+.light .bg-gray-800\/30 {
+  background-color: #F1F5F9 !important;
+}
+
+.light .hover\:bg-gray-800\/40:hover,
+.light .hover\:bg-gray-800:hover {
+  background-color: #E2E8F0 !important;
+}
+
+/* Text overrides in light mode */
+.light .text-white {
+  color: #0F172A !important;
+}
+
+.light .text-gray-200,
+.light .text-gray-300,
+.light .text-gray-400 {
+  color: #334155 !important;
+}
+
+.light .text-gray-500,
+.light .text-gray-600 {
+  color: #64748B !important;
+}
+
+.light .placeholder\:text-gray-600::placeholder,
+.light .placeholder\:text-gray-800::placeholder {
+  color: #94A3B8 !important;
+}
+
+/* Green text contrast improvement on light background */
+.light .text-\[\#00D632\] {
+  color: #008A20 !important;
+}
+
+.light .bg-\[\#00D632\]\/10 {
+  background-color: rgba(0, 182, 42, 0.12) !important;
+}
+
+/* Border overrides in light mode */
+.light .border-gray-800,
+.light .border-gray-800\/80,
+.light .border-gray-800\/50,
+.light .border-gray-700,
+.light .border-gray-700\/50,
+.light .border-gray-900,
+.light .border-white\/5,
+.light .border-white\/10 {
+  border-color: #CBD5E1 !important;
+}
+
+/* Modals & Overlays */
+.light .bg-black\/80,
+.light .bg-black\/90,
+.light .bg-black\/95 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.light .bg-black {
+  background-color: #FFFFFF !important;
+}
+
+/* Maintain black text on green buttons in light mode */
+.light .bg-\[\#00D632\] {
+  background-color: #00C82E !important;
+  color: #000000 !important;
+}
+
+.light .bg-\[\#00D632\] .text-black,
+.light button.bg-\[\#00D632\] {
+  color: #000000 !important;
+}
+
+/* Custom scrollbar for light mode */
+.light ::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+}

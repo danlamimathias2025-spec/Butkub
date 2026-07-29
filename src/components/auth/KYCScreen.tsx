@@ -26,10 +26,23 @@ export default function KYCScreen({ onBack, onSuccess }: KYCScreenProps) {
     setLoading(true);
     
     try {
-      // Update user document with PENDING status
+      let documentDataUrl = '';
+      if (file) {
+        documentDataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (err) => reject(err);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // Update user document with PENDING status and uploaded document data
       await updateDoc(doc(db, 'users', auth.currentUser.uid), {
         kycStatus: 'PENDING',
         nationality,
+        kycDocumentUrl: documentDataUrl || null,
+        kycDocumentName: file?.name || 'Document',
+        submittedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
       
@@ -51,7 +64,7 @@ export default function KYCScreen({ onBack, onSuccess }: KYCScreenProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-[#0D1117] z-[120] flex flex-col p-5 overflow-y-auto no-scrollbar">
+    <div className="fixed inset-0 bg-[#0D1117] z-[160] flex flex-col p-5 pb-28 overflow-y-auto no-scrollbar">
       <header className="mb-8">
         <div className="flex items-center gap-4 mb-6">
           <button 
@@ -144,12 +157,12 @@ export default function KYCScreen({ onBack, onSuccess }: KYCScreenProps) {
         </div>
       </div>
 
-      <div className="pt-8">
+      <div className="pt-6 pb-6">
         <motion.button
           whileTap={{ scale: 0.98 }}
           onClick={handleSubmit}
           disabled={!file || loading}
-          className="w-full py-4 rounded-2xl bg-[#00D632] text-black font-black text-lg shadow-[0_10px_30px_rgba(0,214,50,0.2)] disabled:opacity-50"
+          className="w-full py-2.5 rounded-xl bg-[#00D632] text-black font-bold text-xs uppercase tracking-wider shadow-[0_6px_20px_rgba(0,214,50,0.2)] disabled:opacity-50 hover:bg-[#00B62A] transition-all"
         >
           {loading ? t('verifying') : t('submit_verification')}
         </motion.button>

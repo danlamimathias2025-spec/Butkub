@@ -38,6 +38,11 @@ service cloud.firestore {
         allow read: if isOwner(uid) || isAdmin();
         allow write: if isSignedIn();
       }
+
+      match /admin_notifications/{notificationId} {
+        allow read, update: if isOwner(uid) || isAdmin();
+        allow create, delete: if isAdmin();
+      }
     }
 
     // Global transactions view for admin (Collection Group)

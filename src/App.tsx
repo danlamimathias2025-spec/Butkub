@@ -4,7 +4,9 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
 import BottomNav from './components/BottomNav';
 import SplashScreen from './components/SplashScreen';
-import { AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
+import { NavScrollProvider } from './contexts/NavScrollContext';
+import AdminNotificationModal from './components/AdminNotificationModal';
 
 const HomeScreen = lazy(() => import('./components/screens/HomeScreen'));
 const MarketScreen = lazy(() => import('./components/screens/MarketScreen'));
@@ -23,14 +25,28 @@ const LoadingSpinner = () => (
   </div>
 );
 
+const TAB_ORDER: TabType[] = ['Home', 'Market', 'Trade', 'Wallet', 'Account'];
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('Home');
+  const [prevTab, setPrevTab] = useState<TabType>('Home');
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
   const [authView, setAuthView] = useState<'login' | 'signup' | 'kyc'>('login');
   const [authEmail, setAuthEmail] = useState('');
   const [showKYC, setShowKYC] = useState(false);
+
+  const handleTabChange = (newTab: TabType) => {
+    if (newTab !== activeTab) {
+      setPrevTab(activeTab);
+      setActiveTab(newTab);
+    }
+  };
+
+  const currentIdx = TAB_ORDER.indexOf(activeTab);
+  const prevIdx = TAB_ORDER.indexOf(prevTab);
+  const direction = currentIdx >= prevIdx ? 1 : -1;
 
   useEffect(() => {
     // Initial loading timer for splash screen
@@ -160,14 +176,31 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0D1117] text-white flex justify-center items-center font-sans overflow-hidden">
-      <div className="flex flex-col w-full max-w-[400px] h-screen max-h-[768px] bg-[#0D1117] relative shadow-2xl border-x border-gray-800/50">
-        <Suspense fallback={<LoadingSpinner />}>
-          {renderScreen()}
-        </Suspense>
-        <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+    <NavScrollProvider>
+      <div className="min-h-screen bg-[#0D1117] text-white flex justify-center items-center font-sans overflow-hidden">
+        <div className="flex flex-col w-full max-w-[400px] h-screen max-h-[768px] bg-[#0D1117] relative shadow-2xl border-x border-gray-800/50 overflow-hidden">
+          <div className="flex-1 relative w-full h-full min-h-0 overflow-hidden flex flex-col">
+            <AnimatePresence mode="popLayout" custom={direction} initial={false}>
+              <motion.div
+                key={activeTab}
+                custom={direction}
+                initial={{ opacity: 0, x: direction * 28 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -direction * 28 }}
+                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full h-full flex flex-col flex-1 overflow-hidden"
+              >
+                <Suspense fallback={<LoadingSpinner />}>
+                  {renderScreen()}
+                </Suspense>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+          <BottomNav activeTab={activeTab} setActiveTab={handleTabChange} />
+        </div>
+        {user && <AdminNotificationModal userId={user.uid} />}
       </div>
-    </div>
+    </NavScrollProvider>
   );
 }
 

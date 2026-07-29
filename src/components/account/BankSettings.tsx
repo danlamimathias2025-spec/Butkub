@@ -77,16 +77,16 @@ export default function BankSettings({ onBack }: BankSettingsProps) {
       initial={{ x: '100%' }}
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
-      className="absolute inset-0 bg-[#0D1117] z-[160] flex flex-col"
+      className="fixed inset-0 bg-[#0D1117] z-[160] flex flex-col"
     >
-      <header className="px-5 pt-6 pb-4 flex items-center gap-4">
+      <header className="px-5 pt-6 pb-4 flex items-center gap-4 sticky top-0 bg-[#0D1117] z-10 border-b border-gray-800">
         <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
           <ChevronLeft className="w-6 h-6" />
         </button>
         <h1 className="text-xl font-bold text-white tracking-tight uppercase">Bank Account</h1>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-5 py-6">
+      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-28">
         <div className="mb-8">
           <div className="w-16 h-16 bg-[#00D632]/10 rounded-2xl flex items-center justify-center text-[#00D632] mb-4">
             <Landmark className="w-8 h-8" />
@@ -161,7 +161,7 @@ export default function BankSettings({ onBack }: BankSettingsProps) {
           <motion.button
             whileTap={{ scale: 0.95 }}
             disabled={loading}
-            className="w-full bg-[#00D632] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-[#00D632]/20 hover:bg-[#00B62A] transition-all disabled:opacity-50 mt-4"
+            className="w-full bg-[#00D632] text-black py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md shadow-[#00D632]/20 hover:bg-[#00B62A] transition-all disabled:opacity-50 mt-4"
           >
             {loading ? 'Saving...' : 'Save Bank Details'}
           </motion.button>

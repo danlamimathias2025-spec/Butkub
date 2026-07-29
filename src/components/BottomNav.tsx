@@ -2,8 +2,10 @@ import { memo } from 'react';
 import { Home, BarChart3, Repeat, Wallet, User } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/src/lib/utils';
+import { triggerHaptic } from '@/src/lib/haptics';
 import { TabType } from '../App';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useNavScroll } from '../contexts/NavScrollContext';
 
 interface BottomNavProps {
   activeTab: TabType;
@@ -12,6 +14,8 @@ interface BottomNavProps {
 
 const BottomNav = memo(({ activeTab, setActiveTab }: BottomNavProps) => {
   const { t } = useLanguage();
+  const { isNavVisible } = useNavScroll();
+
   const tabs: { name: TabType; icon: any; translationKey: string }[] = [
     { name: 'Home', icon: Home, translationKey: 'home' },
     { name: 'Market', icon: BarChart3, translationKey: 'market' },
@@ -21,7 +25,16 @@ const BottomNav = memo(({ activeTab, setActiveTab }: BottomNavProps) => {
   ];
 
   return (
-    <div className="fixed bottom-3 left-4 right-4 h-14 bg-gray-900/60 backdrop-blur-2xl rounded-2xl border border-gray-700/50 shadow-2xl flex items-center justify-around px-2 z-50">
+    <motion.div 
+      initial={false}
+      animate={{ 
+        y: isNavVisible ? 0 : 80, 
+        opacity: isNavVisible ? 1 : 0 
+      }}
+      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      className="fixed bottom-3 left-4 right-4 h-14 bg-gray-900/80 backdrop-blur-2xl rounded-2xl border border-gray-700/50 shadow-2xl flex items-center justify-around px-2 z-50"
+      style={{ pointerEvents: isNavVisible ? 'auto' : 'none' }}
+    >
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.name;
@@ -29,7 +42,10 @@ const BottomNav = memo(({ activeTab, setActiveTab }: BottomNavProps) => {
         return (
           <motion.button
             key={tab.name}
-            onClick={() => setActiveTab(tab.name)}
+            onClick={() => {
+              triggerHaptic('light');
+              setActiveTab(tab.name);
+            }}
             whileTap={{ scale: 0.9 }}
             className="flex flex-col items-center justify-center flex-1 relative group"
           >
@@ -54,7 +70,7 @@ const BottomNav = memo(({ activeTab, setActiveTab }: BottomNavProps) => {
           </motion.button>
         );
       })}
-    </div>
+    </motion.div>
   );
 });
 

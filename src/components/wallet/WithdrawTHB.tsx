@@ -6,6 +6,7 @@ import StatusOverlay from '../StatusOverlay';
 import { auth, db } from '../../lib/firebase';
 import { doc, getDoc, setDoc, increment, collection } from 'firebase/firestore';
 import { cn } from '@/src/lib/utils';
+import { triggerHaptic } from '@/src/lib/haptics';
 
 interface WithdrawTHBProps {
   onBack: () => void;
@@ -62,27 +63,27 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 20 }}
-        className="absolute inset-0 bg-[#0D1117] z-[60] flex flex-col p-5"
+        className="absolute inset-0 bg-[#0D1117] z-[60] flex flex-col p-5 overflow-y-auto no-scrollbar"
       >
-        <header className="pt-6 pb-4 flex items-center gap-4">
-          <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
-            <ArrowLeft className="w-6 h-6" />
+        <header className="pt-4 pb-3 flex items-center gap-4">
+          <button onClick={onBack} className="p-1.5 -ml-2 text-gray-400 hover:text-white transition-colors">
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-bold text-white tracking-tight uppercase">Requirements</h1>
+          <h1 className="text-lg font-bold text-white tracking-tight uppercase">Requirements</h1>
         </header>
         <div className="flex-1 flex flex-col items-center justify-center text-center">
-          <div className="w-20 h-20 bg-yellow-500/10 rounded-3xl flex items-center justify-center text-yellow-500 mb-6">
-             <AlertCircle className="w-10 h-10" />
+          <div className="w-16 h-16 bg-yellow-500/10 rounded-2xl flex items-center justify-center text-yellow-500 mb-4">
+             <AlertCircle className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-black text-white mb-3">Withdrawal Restricted</h2>
-          <p className="text-gray-400 font-medium mb-8 max-w-xs">
+          <h2 className="text-xl font-bold text-white mb-2">Withdrawal Restricted</h2>
+          <p className="text-gray-400 font-medium mb-6 text-xs max-w-xs leading-relaxed">
             {kycStatus !== 'VERIFIED' 
               ? "Please complete your identity verification (KYC) to enable withdrawals."
               : "Please link a bank account in your Account settings to withdraw funds."}
           </p>
           <button 
             onClick={onBack}
-            className="w-full py-4 bg-[#00D632] text-black font-black rounded-2xl uppercase tracking-widest shadow-lg shadow-[#00D632]/20"
+            className="w-full py-2.5 bg-[#00D632] text-black font-bold text-xs rounded-xl uppercase tracking-wider shadow-md shadow-[#00D632]/20 hover:bg-[#00B62A] transition-all"
           >
             Go to Account
           </button>
@@ -134,18 +135,47 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
       }, { merge: true });
 
       // Add transaction
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let randomStr = '';
+      for (let i = 0; i < 8; i++) {
+        randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      const txId = `TX-${now.toISOString().slice(2, 10).replace(/-/g, '')}-${randomStr}`;
+
+      const senderInfo = {
+        name: auth.currentUser.email || 'User Account',
+        account: 'Bitkub THB Wallet',
+        type: 'Bitkub User'
+      };
+
+      const bankAccLast4 = profile?.accountNumber ? profile.accountNumber.slice(-4) : '****';
+      const receiverInfo = {
+        name: profile?.bankName || 'Kasikorn Bank',
+        account: `Acc: •••• ${bankAccLast4}`,
+        type: 'Linked Bank Account'
+      };
+
       const txRef = doc(collection(db, 'users', userRef, 'transactions'));
       await setDoc(txRef, {
+        txId,
         type: 'WITHDRAW',
         asset: 'THB',
         amount: withdrawAmount - FEE,
         fee: FEE,
         status: 'PENDING',
-        timestamp: new Date().toISOString(),
+        timestamp: now.toISOString(),
+        dateStr,
+        timeStr,
+        senderInfo,
+        receiverInfo,
         userEmail: auth.currentUser.email,
         userId: auth.currentUser.uid
       });
 
+      triggerHaptic('success');
       setStatus({
         type: 'success',
         title: 'Withdrawal Success',
@@ -153,6 +183,7 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
       });
     } catch (error: any) {
       console.error("Withdrawal error:", error);
+      triggerHaptic('error');
       setStatus({
         type: 'error',
         title: 'Withdrawal Failed',
@@ -170,9 +201,9 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      className="absolute inset-0 bg-[#0D1117] z-[60] flex flex-col"
+      className="fixed inset-0 bg-[#0D1117] z-[150] flex flex-col"
     >
-      <header className="px-5 pt-6 pb-4 flex items-center justify-between">
+      <header className="px-5 pt-6 pb-4 flex items-center justify-between sticky top-0 bg-[#0D1117] z-10">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="p-2 rounded-full hover:bg-gray-800 text-gray-400">
             <ArrowLeft className="w-6 h-6" />
@@ -184,7 +215,7 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-24">
+      <div className="flex-1 overflow-y-auto px-5 pb-28">
         {/* Balance Summary */}
         <div className="bg-gray-800/20 border border-gray-800/50 rounded-3xl p-6 mb-8 relative overflow-hidden">
           <div className="flex justify-between items-start mb-6">
@@ -275,7 +306,7 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
           whileTap={{ scale: 0.98 }}
           onClick={handleWithdrawClick}
           disabled={!amount || parseFloat(amount) <= FEE}
-          className="w-full py-4 rounded-2xl bg-[#00D632] text-black font-black text-lg shadow-[0_10px_30px_rgba(0,214,50,0.2)] disabled:opacity-50 disabled:shadow-none"
+          className="w-full py-2.5 rounded-xl bg-[#00D632] text-black font-bold text-xs uppercase tracking-wider shadow-[0_6px_20px_rgba(0,214,50,0.2)] disabled:opacity-50 disabled:shadow-none transition-all"
         >
           {t('withdraw_thb')}
         </motion.button>
@@ -288,20 +319,20 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/95 z-[70] flex flex-col p-5 justify-center"
+            className="fixed inset-0 bg-black/95 z-[70] flex flex-col p-5 justify-center overflow-y-auto no-scrollbar"
           >
-            <div className="max-w-xs mx-auto w-full">
-              <div className="flex flex-col items-center mb-8">
-                <div className="w-16 h-16 bg-[#00D632]/10 rounded-2xl flex items-center justify-center text-[#00D632] mb-4">
-                  <ShieldCheck className="w-8 h-8" />
+            <div className="max-w-xs mx-auto w-full my-auto">
+              <div className="flex flex-col items-center mb-6">
+                <div className="w-12 h-12 bg-[#00D632]/10 rounded-xl flex items-center justify-center text-[#00D632] mb-3">
+                  <ShieldCheck className="w-6 h-6" />
                 </div>
-                <h2 className="text-xl font-black text-white mb-2 text-center uppercase tracking-tight">{t('two_step_title')}</h2>
+                <h2 className="text-lg font-bold text-white mb-1 text-center uppercase tracking-tight">{t('two_step_title')}</h2>
                 <p className="text-center text-[10px] text-gray-500 font-medium px-4">
                   {t('enter_2fa')}
                 </p>
               </div>
 
-              <div className="flex gap-2 mb-8 justify-center">
+              <div className="flex gap-2 mb-6 justify-center">
                 {twoFACode.map((digit, i) => (
                   <input
                     key={i}
@@ -309,22 +340,22 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
                     type="number"
                     value={digit}
                     onChange={(e) => handle2FAInput(i, e.target.value)}
-                    className="w-10 h-14 bg-gray-800/50 border border-gray-700 rounded-xl text-center text-white text-xl font-black focus:outline-none focus:border-[#00D632]"
+                    className="w-9 h-12 bg-gray-800/50 border border-gray-700 rounded-lg text-center text-white text-lg font-bold focus:outline-none focus:border-[#00D632]"
                   />
                 ))}
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <button 
                   onClick={handleConfirmWithdrawal}
                   disabled={loading || twoFACode.some(c => !c)}
-                  className="w-full py-4 rounded-2xl bg-[#00D632] text-black font-black flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-2.5 rounded-xl bg-[#00D632] text-black font-bold text-xs flex items-center justify-center gap-2 uppercase tracking-wider disabled:opacity-50"
                 >
-                  {loading ? <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Lock className="w-5 h-5" /> {t('confirm_withdraw')}</>}
+                  {loading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Lock className="w-4 h-4" /> {t('confirm_withdraw')}</>}
                 </button>
                 <button 
                   onClick={() => setShow2FA(false)}
-                  className="w-full py-4 rounded-2xl bg-white/5 text-gray-500 font-black flex items-center justify-center gap-2 hover:bg-white/10 transition-colors"
+                  className="w-full py-2.5 rounded-xl bg-white/5 text-gray-400 font-bold text-xs flex items-center justify-center gap-2 hover:bg-white/10 transition-colors uppercase tracking-wider"
                 >
                    {t('cancel_request')}
                 </button>
