@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, ArrowLeft, Search, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import StatusOverlay from '../StatusOverlay';
 import { auth, db } from '../../lib/firebase';
 import { collection, query, where, getDocs, doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/src/lib/utils';
@@ -20,6 +21,7 @@ export default function SendMoney({ onBack, onSuccess }: SendMoneyProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<'DETAILS' | 'SUCCESS'>('DETAILS');
+  const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
 
   const handleSend = async () => {
     if (!auth.currentUser) return;
@@ -99,11 +101,19 @@ export default function SendMoney({ onBack, onSuccess }: SendMoneyProps) {
         });
       });
 
-      setStep('SUCCESS');
-      setTimeout(onSuccess, 3000);
+      setStatus({
+        type: 'success',
+        title: 'Transfer Successful',
+        message: `Successfully sent ${amount} ${asset} to ${recipientEmail}.`
+      });
     } catch (err: any) {
       console.error("Transfer error:", err);
       setError(err.message || 'Failed to send money');
+      setStatus({
+        type: 'error',
+        title: 'Transfer Failed',
+        message: err.message || 'There was an error processing your transfer.'
+      });
     } finally {
       setLoading(false);
     }
@@ -256,6 +266,19 @@ export default function SendMoney({ onBack, onSuccess }: SendMoneyProps) {
           )}
         </AnimatePresence>
       </div>
+
+      <StatusOverlay
+        isOpen={!!status}
+        type={status?.type || 'success'}
+        title={status?.title || ''}
+        message={status?.message}
+        onClose={() => {
+          if (status?.type === 'success') {
+            onSuccess();
+          }
+          setStatus(null);
+        }}
+      />
     </div>
   );
 }

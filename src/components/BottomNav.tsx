@@ -21,7 +21,7 @@ const BottomNav = memo(({ activeTab, setActiveTab }: BottomNavProps) => {
   ];
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 h-20 bg-gray-900/60 backdrop-blur-2xl rounded-3xl border border-gray-700/50 shadow-2xl flex items-center justify-around px-2 z-50">
+    <div className="fixed bottom-3 left-4 right-4 h-14 bg-gray-900/60 backdrop-blur-2xl rounded-2xl border border-gray-700/50 shadow-2xl flex items-center justify-around px-2 z-50">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.name;
@@ -38,15 +38,15 @@ const BottomNav = memo(({ activeTab, setActiveTab }: BottomNavProps) => {
               isActive ? "text-[#00D632] filter drop-shadow-[0_0_8px_rgba(0,214,50,0.4)]" : "text-gray-500"
             )}>
               {tab.name === 'Trade' ? (
-                <div className="w-12 h-12 bg-[#00D632] rounded-full -mt-10 shadow-[0_8px_20px_rgba(0,214,50,0.4)] flex items-center justify-center text-black border-4 border-[#0D1117] transform group-active:scale-90 transition-transform">
-                  <Icon className="w-6 h-6 stroke-[3]" />
+                <div className="w-10 h-10 bg-[#00D632] rounded-full -mt-8 shadow-[0_8px_20px_rgba(0,214,50,0.4)] flex items-center justify-center text-black border-4 border-[#0D1117] transform group-active:scale-90 transition-transform">
+                  <Icon className="w-5 h-5 stroke-[3]" />
                 </div>
               ) : (
-                <Icon className="w-6 h-6" />
+                <Icon className="w-5 h-5" />
               )}
             </div>
             <span className={cn(
-              "text-[10px] mt-1 font-bold transition-all duration-300",
+              "text-[9px] mt-0.5 font-bold transition-all duration-300 uppercase tracking-tighter",
               isActive ? "text-[#00D632]" : "text-gray-500"
             )}>
               {t(tab.translationKey)}

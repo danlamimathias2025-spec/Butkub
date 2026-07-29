@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, CheckCircle2, Circle } from 'lucide-react';
 import { motion } from 'motion/react';
+import StatusOverlay from '../StatusOverlay';
 import { auth, db } from '@/src/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
@@ -8,17 +9,19 @@ import { cn } from '@/src/lib/utils';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 interface SignUpScreenProps {
-  onBack: () => void;
+  onBack: (email?: string) => void;
   onSuccess: () => void;
+  initialEmail?: string;
 }
 
-export default function SignUpScreen({ onBack, onSuccess }: SignUpScreenProps) {
+export default function SignUpScreen({ onBack, onSuccess, initialEmail = '' }: SignUpScreenProps) {
   const { t, language, setLanguage } = useLanguage();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
 
   const WELCOME_BONUS_THB = 180; // Approx $5
   const ADMIN_EMAIL = 'danlamimathias2025@gmail.com';
@@ -43,6 +46,12 @@ export default function SignUpScreen({ onBack, onSuccess }: SignUpScreenProps) {
     setLoading(true);
     setError('');
     try {
+      // Check if user is already signed in with this email (race condition safeguard)
+      if (auth.currentUser && auth.currentUser.email === email) {
+        onSuccess();
+        return;
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
@@ -54,22 +63,49 @@ export default function SignUpScreen({ onBack, onSuccess }: SignUpScreenProps) {
         uid: user.uid,
         email: user.email,
         role: user.email === ADMIN_EMAIL ? 'ADMIN' : 'USER',
-        kycStatus: 'NOT_STARTED', // Changed from PENDING to NOT_STARTED
+        kycStatus: 'NOT_STARTED',
         createdAt: new Date().toISOString()
       });
 
+      // Initialize default balances to 0
+      const assets = ['THB', 'KUB', 'BTC', 'ETH', 'SOL'];
+      assets.forEach(symbol => {
+        batch.set(doc(db, 'users', user.uid, 'balances', symbol), {
+          asset: symbol,
+          amount: 0,
+          updatedAt: new Date().toISOString()
+        });
+      });
+
       await batch.commit();
-      onSuccess();
+      setStatus({
+        type: 'success',
+        title: t('account_created') || 'Success!',
+        message: 'Your account has been created successfully.'
+      });
     } catch (err: any) {
+      console.error("Signup error:", err);
+      let errorMessage = err.message || 'Failed to sign up';
       if (err.code === 'auth/email-already-in-use') {
-        setError('This email is already registered. Please log in instead.');
+        errorMessage = 'This email is already registered. Please log in instead.';
+        setError(errorMessage);
       } else if (err.code === 'auth/invalid-email') {
-        setError('Please enter a valid email address.');
+        errorMessage = 'Please enter a valid email address.';
+        setError(errorMessage);
       } else if (err.code === 'auth/weak-password') {
-        setError('Password is too weak.');
+        errorMessage = 'Password is too weak.';
+        setError(errorMessage);
+      } else if (err.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your connection.';
+        setError(errorMessage);
       } else {
-        setError(err.message || 'Failed to sign up');
+        setError(errorMessage);
       }
+      setStatus({
+        type: 'error',
+        title: 'Registration Failed',
+        message: errorMessage
+      });
     } finally {
       setLoading(false);
     }
@@ -78,7 +114,7 @@ export default function SignUpScreen({ onBack, onSuccess }: SignUpScreenProps) {
   return (
     <div className="fixed inset-0 bg-[#0D1117] z-[110] flex flex-col p-5 overflow-y-auto no-scrollbar">
       <header className="flex justify-between items-center mb-8">
-        <button onClick={onBack} className="p-2 -ml-2 text-gray-400">
+        <button onClick={() => onBack(email)} className="p-2 -ml-2 text-gray-400">
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div className="flex bg-gray-800/50 rounded-full p-0.5 text-[10px] font-medium border border-gray-700">
@@ -176,16 +212,43 @@ export default function SignUpScreen({ onBack, onSuccess }: SignUpScreenProps) {
           </label>
         </div>
 
-        {error && <p className="text-red-500 text-xs font-medium px-1">{error}</p>}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 space-y-3">
+            <p className="text-red-500 text-xs font-bold">{error}</p>
+            {error.includes('already registered') && (
+              <button 
+                type="button"
+                onClick={() => onBack(email)}
+                className="w-full py-2 bg-red-500/20 hover:bg-red-500/30 text-red-500 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors"
+              >
+                Go to Login
+              </button>
+            )}
+          </div>
+        )}
 
         <motion.button
           whileTap={{ scale: 0.98 }}
           disabled={loading}
+          type="submit"
           className="w-full py-4 rounded-2xl bg-[#00D632] text-black font-black text-lg shadow-[0_10px_30px_rgba(0,214,50,0.2)] disabled:opacity-50"
         >
           {loading ? t('creating_account') : t('signup_button')}
         </motion.button>
       </form>
+
+      <StatusOverlay
+        isOpen={!!status}
+        type={status?.type || 'success'}
+        title={status?.title || ''}
+        message={status?.message}
+        onClose={() => {
+          if (status?.type === 'success') {
+            onSuccess();
+          }
+          setStatus(null);
+        }}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Search } from 'lucide-react';
 import { MarketPair } from '@/src/types';
 import { cn } from '@/src/lib/utils';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 const MARKET_DATA: MarketPair[] = [
   {
@@ -54,6 +55,7 @@ const MARKET_DATA: MarketPair[] = [
 
 const MarketTicker = memo(() => {
   const { t } = useLanguage();
+  const { format } = useCurrency();
   const [activeTab, setActiveTab] = useState('Favorites');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -110,7 +112,7 @@ const MarketTicker = memo(() => {
 
       <div className="flex-1 overflow-y-auto px-5 pb-28 space-y-1">
         {filteredData.map((pair, index) => (
-          <MarketRow key={pair.symbol} pair={pair} index={index} t={t} />
+          <MarketRow key={pair.symbol} pair={pair} index={index} t={t} format={format} />
         ))}
         {filteredData.length === 0 && (
           <div className="py-10 text-center text-gray-500 text-sm">
@@ -124,7 +126,7 @@ const MarketTicker = memo(() => {
 
 MarketTicker.displayName = 'MarketTicker';
 
-const MarketRow = memo(({ pair, index, t }: { pair: MarketPair, index: number, t: (k: string) => string }) => (
+const MarketRow = memo(({ pair, index, t, format }: { pair: MarketPair, index: number, t: (k: string) => string, format: any }) => (
   <motion.div
     initial={{ opacity: 0, x: -10 }}
     animate={{ opacity: 1, x: 0 }}
@@ -167,7 +169,7 @@ const MarketRow = memo(({ pair, index, t }: { pair: MarketPair, index: number, t
     </div>
 
     <div className="flex flex-col items-end">
-      <span className="text-white font-bold text-sm">฿{pair.price.toLocaleString()}</span>
+      <span className="text-white font-bold text-sm">{format(pair.price)}</span>
       <span className={cn(
         "text-[10px] font-bold",
         pair.isNeutral ? "text-gray-500" : (pair.change > 0 ? "text-[#00D632]" : "text-red-500")

@@ -36,20 +36,20 @@ const MarketScreen = memo(() => {
 
   return (
     <div className="flex-1 flex flex-col bg-[#0D1117] h-full overflow-hidden">
-      <header className="px-5 pt-6 pb-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-white tracking-tight uppercase">{t('market_title')}</h1>
-        <button className="p-2 rounded-full hover:bg-gray-800 text-gray-400">
-          <Search className="w-5 h-5" />
+      <header className="px-5 pt-4 pb-2 flex justify-between items-center">
+        <h1 className="text-lg font-bold text-white tracking-tight uppercase">{t('market_title')}</h1>
+        <button className="p-1.5 rounded-full hover:bg-gray-800 text-gray-400">
+          <Search className="w-4 h-4" />
         </button>
       </header>
 
-      <div className="px-5 mb-4 overflow-x-auto no-scrollbar flex items-center gap-6 border-b border-gray-800/50">
+      <div className="px-5 mb-2 overflow-x-auto no-scrollbar flex items-center gap-4 border-b border-gray-800/50">
         {tabs.map((tab) => (
           <button
             key={tab.value}
             onClick={() => setActiveTab(tab.value)}
             className={cn(
-              "whitespace-nowrap text-xs font-semibold transition-colors relative pb-3",
+              "whitespace-nowrap text-[10px] font-semibold transition-colors relative pb-2",
               activeTab === tab.value ? "text-[#00D632]" : "text-gray-500"
             )}
           >
@@ -67,17 +67,17 @@ const MarketScreen = memo(() => {
       <div className="flex-1 overflow-y-auto px-5 pb-24">
         {loading ? (
           Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center justify-between py-4 border-b border-gray-800/30">
-              <div className="flex items-center gap-3">
-                <Skeleton className="w-10 h-10 rounded-full" />
-                <div className="space-y-2">
-                  <Skeleton className="w-20 h-4" />
-                  <Skeleton className="w-12 h-3" />
+            <div key={i} className="flex items-center justify-between py-3 border-b border-gray-800/30">
+              <div className="flex items-center gap-2">
+                <Skeleton className="w-8 h-8 rounded-full" />
+                <div className="space-y-1">
+                  <Skeleton className="w-16 h-3" />
+                  <Skeleton className="w-10 h-2" />
                 </div>
               </div>
-              <div className="flex flex-col items-end space-y-2">
-                <Skeleton className="w-24 h-4" />
-                <Skeleton className="w-16 h-4 rounded" />
+              <div className="flex flex-col items-end space-y-1">
+                <Skeleton className="w-20 h-3" />
+                <Skeleton className="w-12 h-3 rounded" />
               </div>
             </div>
           ))
@@ -88,29 +88,29 @@ const MarketScreen = memo(() => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="flex items-center justify-between py-4 border-b border-gray-800/30 group cursor-pointer"
+              className="flex items-center justify-between py-3 border-b border-gray-800/30 group cursor-pointer"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-800/50 flex items-center justify-center border border-gray-700 group-hover:border-[#00D632]/30 transition-colors">
-                  <TrendingUp className={cn("w-5 h-5", pair.change > 0 ? "text-[#00D632]" : "text-red-500")} />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-gray-800/50 flex items-center justify-center border border-gray-700 group-hover:border-[#00D632]/30 transition-colors">
+                  <TrendingUp className={cn("w-4 h-4", pair.change > 0 ? "text-[#00D632]" : "text-red-500")} />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-white font-bold text-sm">{pair.symbol}</span>
-                  <span className="text-[10px] text-gray-500 uppercase tracking-widest font-medium">{t('spot')}</span>
+                  <span className="text-white font-bold text-xs">{pair.symbol}</span>
+                  <span className="text-[9px] text-gray-500 uppercase tracking-widest font-medium">{t('spot')}</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <div className="flex flex-col items-end">
-                  <span className="text-white font-bold text-sm">{pair.price}</span>
+                  <span className="text-white font-bold text-xs">{pair.price}</span>
                   <span className={cn(
-                    "text-[10px] font-bold px-1.5 py-0.5 rounded",
+                    "text-[9px] font-bold px-1 py-0.5 rounded",
                     pair.change > 0 ? "text-[#00D632]" : "text-red-500"
                   )}>
                     {pair.change > 0 ? '+' : ''}{pair.change}%
                   </span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-700" />
+                <ChevronRight className="w-3.5 h-3.5 text-gray-700" />
               </div>
             </motion.div>
           ))

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { ChevronDown, BarChart2, AlertCircle, CheckCircle2, ArrowUpDown, Info, Zap, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import StatusOverlay from '../StatusOverlay';
 import { cn } from '@/src/lib/utils';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { auth, db } from '../../lib/firebase';
@@ -18,6 +19,7 @@ const TradeScreen = memo(() => {
   const [balances, setBalances] = useState<{ [key: string]: number }>({ THB: 0, KUB: 0, BTC: 0, ETH: 0, SOL: 0 });
   const [kycStatus, setKycStatus] = useState<string>('LOADING');
   const [showConfirm, setShowConfirm] = useState(false);
+  const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
 
   // Convert Mode States
   const [fromAsset, setFromAsset] = useState('THB');
@@ -42,25 +44,22 @@ const TradeScreen = memo(() => {
         );
         
         const snaps = await Promise.all(balancePromises);
-        const newBalances: { [key: string]: number } = {};
+        const newBalances: { [key: string]: number } = { THB: 0, KUB: 0, BTC: 0, ETH: 0, SOL: 0 };
         
         snaps.forEach((snap, i) => {
           const symbol = Object.keys(ASSETS_DATA)[i];
-          newBalances[symbol] = snap.exists() ? snap.data().amount : 0;
+          if (snap.exists()) {
+            const amount = snap.data().amount;
+            if (typeof amount === 'number') {
+              newBalances[symbol] = amount;
+            }
+          }
         });
         
         setBalances(newBalances);
-
-        if (!newBalances.THB && auth.currentUser) {
-           // Ensure THB doc exists
-           await setDoc(doc(db, 'users', auth.currentUser.uid, 'balances', 'THB'), {
-            asset: 'THB',
-            amount: 0,
-            updatedAt: new Date().toISOString()
-          }, { merge: true });
-        }
       } catch (error) {
         console.error("Error fetching balances:", error);
+        setBalances({ THB: 0, KUB: 0, BTC: 0, ETH: 0, SOL: 0 });
       }
     };
     fetchBalancesAndKYC();
@@ -128,11 +127,19 @@ const TradeScreen = memo(() => {
         KUB: side === 'BUY' ? prev.KUB + numAmount : prev.KUB - numAmount
       }));
 
-      setMessage({ type: 'success', text: `${side} order completed successfully!` });
+      setStatus({
+        type: 'success',
+        title: 'Order Completed',
+        message: `Successfully ${side.toLowerCase()}ed ${numAmount} KUB at ฿${PRICE}.`
+      });
       setAmount('');
     } catch (error: any) {
       console.error("Trade error:", error);
-      setMessage({ type: 'error', text: error.message || 'Transaction failed' });
+      setStatus({
+        type: 'error',
+        title: 'Order Failed',
+        message: error.message || 'There was an error processing your trade.'
+      });
     } finally {
       setLoading(false);
     }
@@ -196,11 +203,19 @@ const TradeScreen = memo(() => {
         [toAsset]: prev[toAsset] + toAmount
       }));
 
-      setMessage({ type: 'success', text: `Conversion successful! You received ${toAmount.toFixed(8)} ${toAsset}` });
+      setStatus({
+        type: 'success',
+        title: 'Conversion Success',
+        message: `Converted ${numAmount} ${fromAsset} to ${toAmount.toFixed(8)} ${toAsset}.`
+      });
       setConvertAmount('');
     } catch (error: any) {
       console.error("Convert error:", error);
-      setMessage({ type: 'error', text: error.message || 'Conversion failed' });
+      setStatus({
+        type: 'error',
+        title: 'Conversion Failed',
+        message: error.message || 'There was an error processing your conversion.'
+      });
     } finally {
       setLoading(false);
     }
@@ -222,25 +237,25 @@ const TradeScreen = memo(() => {
 
   return (
     <div className="flex-1 flex flex-col bg-[#0D1117] h-full overflow-hidden">
-      <header className="px-5 pt-6 pb-2 flex justify-between items-center">
-        <div className="flex items-center gap-2 cursor-pointer group">
-          <h1 className="text-xl font-black text-white tracking-tight uppercase">
+      <header className="px-5 pt-4 pb-1 flex justify-between items-center">
+        <div className="flex items-center gap-1.5 cursor-pointer group">
+          <h1 className="text-lg font-black text-white tracking-tight uppercase">
             {activeTab === 'SPOT' ? 'KUB/THB' : 'Convert'}
           </h1>
-          {activeTab === 'SPOT' && <ChevronDown className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />}
+          {activeTab === 'SPOT' && <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" />}
         </div>
-        <div className="flex bg-gray-800/30 rounded-xl p-1 border border-gray-800/50">
+        <div className="flex bg-gray-800/30 rounded-lg p-0.5 border border-gray-800/50">
           <button 
             onClick={() => setActiveTab('SPOT')}
             className={cn(
-              "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all relative",
+              "px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest transition-all relative",
               activeTab === 'SPOT' ? "text-white" : "text-gray-500"
             )}
           >
             {activeTab === 'SPOT' && (
               <motion.div 
                 layoutId="tradeActiveTab"
-                className="absolute inset-0 bg-gray-800 rounded-lg -z-10"
+                className="absolute inset-0 bg-gray-800 rounded-md -z-10"
               />
             )}
             Spot
@@ -248,14 +263,14 @@ const TradeScreen = memo(() => {
           <button 
             onClick={() => setActiveTab('CONVERT')}
             className={cn(
-              "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all relative",
+              "px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest transition-all relative",
               activeTab === 'CONVERT' ? "text-white" : "text-gray-500"
             )}
           >
             {activeTab === 'CONVERT' && (
               <motion.div 
                 layoutId="tradeActiveTab"
-                className="absolute inset-0 bg-gray-800 rounded-lg -z-10"
+                className="absolute inset-0 bg-gray-800 rounded-md -z-10"
               />
             )}
             Convert
@@ -263,7 +278,7 @@ const TradeScreen = memo(() => {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-24 pt-4 relative no-scrollbar">
+      <div className="flex-1 overflow-y-auto px-5 pb-24 pt-2 relative no-scrollbar">
         <AnimatePresence mode="wait">
           {kycStatus !== 'VERIFIED' && kycStatus !== 'LOADING' && (
             <motion.div 
@@ -325,25 +340,25 @@ const TradeScreen = memo(() => {
           </AnimatePresence>
 
           {activeTab === 'SPOT' ? (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Balances */}
-              <div className="flex justify-between items-center mb-4 px-1">
+              <div className="flex justify-between items-center mb-3 px-1">
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase">THB Balance</span>
+                  <span className="text-[9px] text-gray-500 font-bold uppercase">THB Balance</span>
                   <motion.span 
                     key={balances.THB}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    className="text-sm font-bold text-white"
+                    className="text-xs font-bold text-white"
                   >
                     ฿{balances.THB.toLocaleString()}
                   </motion.span>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase">KUB Balance</span>
+                  <span className="text-[9px] text-gray-500 font-bold uppercase">KUB Balance</span>
                   <motion.span 
                     key={balances.KUB}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    className="text-sm font-bold text-white"
+                    className="text-xs font-bold text-white"
                   >
                     {balances.KUB.toLocaleString()} KUB
                   </motion.span>
@@ -351,68 +366,68 @@ const TradeScreen = memo(() => {
               </div>
 
               {/* Buy/Sell Toggle */}
-              <div className="flex bg-gray-800/30 rounded-2xl p-1 mb-6 border border-gray-800/50">
+              <div className="flex bg-gray-800/30 rounded-xl p-0.5 mb-4 border border-gray-800/50">
                 <button 
                   onClick={() => setSide('BUY')}
                   className={cn(
-                    "flex-1 py-3 rounded-xl text-sm font-bold transition-all relative",
+                    "flex-1 py-2.5 rounded-lg text-xs font-bold transition-all relative",
                     side === 'BUY' ? "text-black" : "text-gray-500"
                   )}
                 >
                   {side === 'BUY' && (
                     <motion.div 
                       layoutId="spotSideTab"
-                      className="absolute inset-0 bg-[#00D632] rounded-xl shadow-lg"
+                      className="absolute inset-0 bg-[#00D632] rounded-lg shadow-lg"
                     />
                   )}
-                  <span className="relative z-10">{t('buy')}</span>
+                  <span className="relative z-10 uppercase tracking-widest">{t('buy')}</span>
                 </button>
                 <button 
                   onClick={() => setSide('SELL')}
                   className={cn(
-                    "flex-1 py-3 rounded-xl text-sm font-bold transition-all relative",
+                    "flex-1 py-2.5 rounded-lg text-xs font-bold transition-all relative",
                     side === 'SELL' ? "text-white" : "text-gray-500"
                   )}
                 >
                   {side === 'SELL' && (
                     <motion.div 
                       layoutId="spotSideTab"
-                      className="absolute inset-0 bg-red-500 rounded-xl shadow-lg"
+                      className="absolute inset-0 bg-red-500 rounded-lg shadow-lg"
                     />
                   )}
-                  <span className="relative z-10">{t('sell')}</span>
+                  <span className="relative z-10 uppercase tracking-widest">{t('sell')}</span>
                 </button>
               </div>
 
               {/* Order Form */}
-              <div className="space-y-4 mb-8">
+              <div className="space-y-3 mb-6">
                 <motion.div 
                   whileTap={{ scale: 0.98 }}
-                  className="flex items-center justify-between bg-gray-800/20 border border-gray-800 rounded-xl px-4 py-3 cursor-pointer"
+                  className="flex items-center justify-between bg-gray-800/20 border border-gray-800 rounded-lg px-3 py-2 cursor-pointer"
                 >
-                  <span className="text-sm font-medium text-white">{orderType === 'Market Order' ? t('market_order') : orderType}</span>
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                  <span className="text-xs font-medium text-white">{orderType === 'Market Order' ? t('market_order') : orderType}</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
                 </motion.div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest px-1">{t('price')} (THB)</label>
-                  <div className="bg-gray-800/20 border border-gray-800 rounded-xl px-4 py-4 text-white font-bold text-lg">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] uppercase font-bold text-gray-500 tracking-widest px-1">{t('price')} (THB)</label>
+                  <div className="bg-gray-800/20 border border-gray-800 rounded-lg px-3 py-3 text-white font-bold text-base">
                     {PRICE}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest px-1">{t('amount')} (KUB)</label>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] uppercase font-bold text-gray-500 tracking-widest px-1">{t('amount')} (KUB)</label>
                   <input 
                     type="number" 
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="0.00"
-                    className="w-full bg-gray-800/20 border border-gray-800 rounded-xl px-4 py-4 text-white font-bold text-lg placeholder:text-gray-700 focus:outline-none focus:border-[#00D632]/30 transition-colors"
+                    className="w-full bg-gray-800/20 border border-gray-800 rounded-lg px-3 py-3 text-white font-bold text-base placeholder:text-gray-700 focus:outline-none focus:border-[#00D632]/30 transition-colors"
                   />
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                   {[0.25, 0.5, 0.75, 1].map((pct) => (
                     <motion.button 
                       key={pct} 
@@ -424,19 +439,19 @@ const TradeScreen = memo(() => {
                           setAmount((balances.KUB * pct).toFixed(4));
                         }
                       }}
-                      className="flex-1 py-2 bg-gray-800/40 rounded-lg text-xs font-bold text-gray-400 border border-gray-700/50 hover:border-[#00D632]/30 hover:text-white transition-all"
+                      className="flex-1 py-1.5 bg-gray-800/40 rounded-md text-[9px] font-bold text-gray-400 border border-gray-700/50 hover:border-[#00D632]/30 hover:text-white transition-all"
                     >
                       {pct * 100}%
                     </motion.button>
                   ))}
                 </div>
 
-                <div className="flex justify-between items-center px-1">
-                  <span className="text-xs text-gray-500 font-medium">{t('total')}</span>
+                <div className="flex justify-between items-center px-1 pt-1">
+                  <span className="text-[10px] text-gray-500 font-medium">{t('total')}</span>
                   <motion.span 
                     key={total}
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    className="text-sm font-bold text-white"
+                    className="text-xs font-bold text-white"
                   >
                     {total} THB
                   </motion.span>
@@ -447,12 +462,12 @@ const TradeScreen = memo(() => {
                   disabled={loading || !amount}
                   onClick={() => setShowConfirm(true)}
                   className={cn(
-                    "w-full py-4 rounded-2xl font-black text-lg shadow-xl transition-all disabled:opacity-50",
+                    "w-full py-3.5 rounded-xl font-black text-base shadow-xl transition-all disabled:opacity-50",
                     side === 'BUY' ? "bg-[#00D632] text-black shadow-[#00D632]/20" : "bg-red-500 text-white shadow-red-500/20"
                   )}
                 >
                   {loading ? (
-                    <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto" />
+                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto" />
                   ) : (
                     `${side === 'BUY' ? t('buy') : t('sell')} KUB`
                   )}
@@ -460,18 +475,18 @@ const TradeScreen = memo(() => {
               </div>
 
               {/* Order Book Brief */}
-              <div className="border-t border-gray-800 pt-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">{t('order_book')}</h3>
-                  <span className="text-[10px] text-gray-600">{t('spread')}: 0.05 (0.06%)</span>
+              <div className="border-t border-gray-800 pt-4">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('order_book')}</h3>
+                  <span className="text-[9px] text-gray-600">{t('spread')}: 0.05 (0.06%)</span>
                 </div>
-                <div className="grid grid-cols-2 gap-8">
-                  <div className="space-y-1">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-0.5">
                     <OrderBookRow price="78.54" amount="1,245.0" color="text-[#00D632]" />
                     <OrderBookRow price="78.53" amount="892.5" color="text-[#00D632]" />
                     <OrderBookRow price="78.52" amount="2,100.0" color="text-[#00D632]" />
                   </div>
-                  <div className="space-y-1 text-right">
+                  <div className="space-y-0.5 text-right">
                     <OrderBookRow price="78.56" amount="450.2" color="text-red-500" reverse />
                     <OrderBookRow price="78.57" amount="1,120.8" color="text-red-500" reverse />
                     <OrderBookRow price="78.58" amount="670.0" color="text-red-500" reverse />
@@ -691,6 +706,14 @@ const TradeScreen = memo(() => {
           </div>
         )}
       </AnimatePresence>
+
+      <StatusOverlay
+        isOpen={!!status}
+        type={status?.type || 'success'}
+        title={status?.title || ''}
+        message={status?.message}
+        onClose={() => setStatus(null)}
+      />
     </div>
   );
 });

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ChevronLeft, Landmark, CreditCard, Building2, CheckCircle2, AlertCircle } from 'lucide-react';
+import StatusOverlay from '../StatusOverlay';
 import { auth, db } from '../../lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
@@ -15,6 +16,7 @@ export default function BankSettings({ onBack }: BankSettingsProps) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
 
   useEffect(() => {
     const fetchBankData = async () => {
@@ -42,11 +44,20 @@ export default function BankSettings({ onBack }: BankSettingsProps) {
         accountName,
         bankLinkedAt: new Date().toISOString()
       });
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      setStatus({
+        type: 'success',
+        title: 'Bank Linked',
+        message: 'Your bank account has been successfully linked.'
+      });
     } catch (err: any) {
       console.error('Error saving bank details:', err);
-      setError('Failed to save bank details. Please try again.');
+      const msg = 'Failed to save bank details. Please try again.';
+      setError(msg);
+      setStatus({
+        type: 'error',
+        title: 'Link Failed',
+        message: msg
+      });
     } finally {
       setLoading(false);
     }
@@ -174,6 +185,19 @@ export default function BankSettings({ onBack }: BankSettingsProps) {
           </ul>
         </div>
       </div>
+
+      <StatusOverlay
+        isOpen={!!status}
+        type={status?.type || 'success'}
+        title={status?.title || ''}
+        message={status?.message}
+        onClose={() => {
+          if (status?.type === 'success') {
+            onBack();
+          }
+          setStatus(null);
+        }}
+      />
     </motion.div>
   );
 }

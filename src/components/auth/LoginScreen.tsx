@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Eye, EyeOff, Key } from 'lucide-react';
 import { motion } from 'motion/react';
+import StatusOverlay from '../StatusOverlay';
 import { auth } from '@/src/lib/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { cn } from '@/src/lib/utils';
@@ -8,20 +9,22 @@ import { useLanguage } from '../../contexts/LanguageContext';
 
 interface LoginScreenProps {
   onClose: () => void;
-  onSignUp: () => void;
+  onSignUp: (email?: string) => void;
   onSuccess: () => void;
+  initialEmail?: string;
 }
 
-export default function LoginScreen({ onClose, onSignUp, onSuccess }: LoginScreenProps) {
+export default function LoginScreen({ onClose, onSignUp, onSuccess, initialEmail = '' }: LoginScreenProps) {
   const { t, language, setLanguage } = useLanguage();
   const [activeTab, setActiveTab] = useState<'Password' | 'Passkey'>('Password');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,19 +33,28 @@ export default function LoginScreen({ onClose, onSignUp, onSuccess }: LoginScree
     setSuccess('');
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      onSuccess();
+      setStatus({
+        type: 'success',
+        title: 'Login Successful',
+        message: 'Welcome back to Bitkub!'
+      });
     } catch (err: any) {
+      let errorMessage = err.message || 'Failed to login';
       if (err.code === 'auth/user-not-found') {
-        setError('No account found with this email.');
+        errorMessage = 'No account found with this email.';
       } else if (err.code === 'auth/wrong-password') {
-        setError('Incorrect password. Please try again.');
+        errorMessage = 'Incorrect password. Please try again.';
       } else if (err.code === 'auth/invalid-email') {
-        setError('Please enter a valid email address.');
+        errorMessage = 'Please enter a valid email address.';
       } else if (err.code === 'auth/invalid-credential') {
-        setError('Invalid login credentials.');
-      } else {
-        setError(err.message || 'Failed to login');
+        errorMessage = 'Invalid login credentials.';
       }
+      setError(errorMessage);
+      setStatus({
+        type: 'error',
+        title: 'Login Failed',
+        message: errorMessage
+      });
     } finally {
       setLoading(false);
     }
@@ -197,9 +209,22 @@ export default function LoginScreen({ onClose, onSignUp, onSuccess }: LoginScree
 
         <p className="text-sm text-gray-400">
           {t('no_account')}{' '}
-          <button onClick={onSignUp} className="text-[#00D632] font-black">{t('sign_up_link')}</button>
+          <button onClick={() => onSignUp(email)} className="text-[#00D632] font-black">{t('sign_up_link')}</button>
         </p>
       </div>
+
+      <StatusOverlay
+        isOpen={!!status}
+        type={status?.type || 'success'}
+        title={status?.title || ''}
+        message={status?.message}
+        onClose={() => {
+          if (status?.type === 'success') {
+            onSuccess();
+          }
+          setStatus(null);
+        }}
+      />
     </div>
   );
 }

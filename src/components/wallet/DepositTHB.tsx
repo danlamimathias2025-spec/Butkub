@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, History, Smartphone, Landmark, Check, QrCode, Download, X, Gift, Copy, ExternalLink, Camera, Send, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import StatusOverlay from '../StatusOverlay';
 import { auth, db } from '../../lib/firebase';
 import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
 import { cn } from '@/src/lib/utils';
@@ -23,6 +24,7 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
   const [loading, setLoading] = useState(false);
   const [kycStatus, setKycStatus] = useState<string>('LOADING');
   const [giftCardImage, setGiftCardImage] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
 
   const generatePayCode = useCallback(() => {
     return Math.floor(100000000000 + Math.random() * 900000000000).toString();
@@ -110,8 +112,13 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
       }
 
       setShowConfirmation(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Deposit error:", error);
+      setStatus({
+        type: 'error',
+        title: 'Request Failed',
+        message: error.message || 'There was an error submitting your deposit request.'
+      });
     } finally {
       setLoading(false);
     }
@@ -349,6 +356,19 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <StatusOverlay
+        isOpen={!!status}
+        type={status?.type || 'success'}
+        title={status?.title || ''}
+        message={status?.message}
+        onClose={() => {
+          if (status?.type === 'success') {
+            onSuccess();
+          }
+          setStatus(null);
+        }}
+      />
     </motion.div>
   );
 }

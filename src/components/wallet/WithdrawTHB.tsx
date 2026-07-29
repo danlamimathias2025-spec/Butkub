@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, HelpCircle, ShieldCheck, Plus, AlertCircle, CheckCircle2, Lock } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import StatusOverlay from '../StatusOverlay';
 import { auth, db } from '../../lib/firebase';
 import { doc, getDoc, setDoc, increment, collection } from 'firebase/firestore';
 import { cn } from '@/src/lib/utils';
@@ -21,6 +22,7 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
   const [error, setError] = useState('');
   const [profile, setProfile] = useState<any>(null);
   const [kycLoading, setKycLoading] = useState(true);
+  const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
 
   const FEE = 20.00;
   const LIMIT = 2000000.00;
@@ -144,9 +146,18 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
         userId: auth.currentUser.uid
       });
 
-      onSuccess();
+      setStatus({
+        type: 'success',
+        title: 'Withdrawal Success',
+        message: 'Your withdrawal request has been submitted successfully.'
+      });
     } catch (error: any) {
-      setError(error.message || "Withdrawal failed");
+      console.error("Withdrawal error:", error);
+      setStatus({
+        type: 'error',
+        title: 'Withdrawal Failed',
+        message: error.message || 'There was an error processing your withdrawal.'
+      });
     } finally {
       setLoading(false);
     }
@@ -322,6 +333,19 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <StatusOverlay
+        isOpen={!!status}
+        type={status?.type || 'success'}
+        title={status?.title || ''}
+        message={status?.message}
+        onClose={() => {
+          if (status?.type === 'success') {
+            onSuccess();
+          }
+          setStatus(null);
+        }}
+      />
     </motion.div>
   );
 }

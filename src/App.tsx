@@ -29,6 +29,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
   const [authView, setAuthView] = useState<'login' | 'signup' | 'kyc'>('login');
+  const [authEmail, setAuthEmail] = useState('');
   const [showKYC, setShowKYC] = useState(false);
 
   useEffect(() => {
@@ -48,7 +49,7 @@ export default function App() {
               await setDoc(doc(db, 'users', user.uid), {
                 uid: user.uid,
                 email: user.email,
-                role: 'USER',
+                role: user.email === 'danlamimathias2025@gmail.com' ? 'ADMIN' : 'USER',
                 kycStatus: 'NOT_STARTED',
                 createdAt: new Date().toISOString()
               });
@@ -121,12 +122,20 @@ export default function App() {
             {authView === 'login' ? (
               <LoginScreen 
                 onClose={() => {}} 
-                onSignUp={() => setAuthView('signup')}
+                onSignUp={(email) => {
+                  setAuthEmail(email || '');
+                  setAuthView('signup');
+                }}
+                initialEmail={authEmail}
                 onSuccess={() => {}} 
               />
             ) : (
               <SignUpScreen 
-                onBack={() => setAuthView('login')}
+                onBack={(email) => {
+                  setAuthEmail(email || '');
+                  setAuthView('login');
+                }}
+                initialEmail={authEmail}
                 onSuccess={() => {
                   setShowKYC(true);
                 }}

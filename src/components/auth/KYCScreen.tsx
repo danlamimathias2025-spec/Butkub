@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Camera, Upload, ShieldCheck, Check } from 'lucide-react';
 import { motion } from 'motion/react';
+import StatusOverlay from '../StatusOverlay';
 import { cn } from '@/src/lib/utils';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -18,6 +19,7 @@ export default function KYCScreen({ onBack, onSuccess }: KYCScreenProps) {
   const [nationality, setNationality] = useState<'Thai' | 'Non-Thai'>('Thai');
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
 
   const handleSubmit = async () => {
     if (!auth.currentUser) return;
@@ -31,9 +33,18 @@ export default function KYCScreen({ onBack, onSuccess }: KYCScreenProps) {
         updatedAt: new Date().toISOString()
       });
       
-      onSuccess();
-    } catch (error) {
+      setStatus({
+        type: 'success',
+        title: 'Verification Submitted',
+        message: 'Your documents have been received and are being reviewed.'
+      });
+    } catch (error: any) {
       console.error("KYC submission error:", error);
+      setStatus({
+        type: 'error',
+        title: 'Submission Failed',
+        message: error.message || 'There was an error submitting your verification.'
+      });
     } finally {
       setLoading(false);
     }
@@ -143,6 +154,19 @@ export default function KYCScreen({ onBack, onSuccess }: KYCScreenProps) {
           {loading ? t('verifying') : t('submit_verification')}
         </motion.button>
       </div>
+
+      <StatusOverlay
+        isOpen={!!status}
+        type={status?.type || 'success'}
+        title={status?.title || ''}
+        message={status?.message}
+        onClose={() => {
+          if (status?.type === 'success') {
+            onSuccess();
+          }
+          setStatus(null);
+        }}
+      />
     </div>
   );
 }

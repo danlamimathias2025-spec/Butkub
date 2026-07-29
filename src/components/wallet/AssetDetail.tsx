@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import StatusOverlay from '../StatusOverlay';
 import { auth, db } from '../../lib/firebase';
 import { doc, getDoc, runTransaction, serverTimestamp, collection } from 'firebase/firestore';
 import { cn } from '@/src/lib/utils';
@@ -23,6 +24,7 @@ export default function AssetDetail({ assetSymbol, onBack, onBalanceUpdate }: As
   const [tradeLoading, setTradeLoading] = useState(false);
   const [tradeStatus, setTradeStatus] = useState<'SUCCESS' | 'ERROR' | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
 
   // Generate some dummy historical data for the chart
   const chartData = useMemo(() => {
@@ -105,16 +107,21 @@ export default function AssetDetail({ assetSymbol, onBack, onBalanceUpdate }: As
         });
       });
 
-      setTradeStatus('SUCCESS');
+      setStatus({
+        type: 'success',
+        title: 'Trade Success',
+        message: `Successfully ${tradeMode === 'BUY' ? 'bought' : 'sold'} ${numAmount} ${assetSymbol}.`
+      });
       onBalanceUpdate();
-      setTimeout(() => {
-        setTradeMode(null);
-        setAmount('');
-        setTradeStatus(null);
-      }, 2000);
+      setTradeMode(null);
+      setAmount('');
     } catch (error: any) {
-      setTradeStatus('ERROR');
-      setErrorMessage(error.message || 'Trade failed');
+      console.error("Trade error:", error);
+      setStatus({
+        type: 'error',
+        title: 'Trade Failed',
+        message: error.message || 'There was an error processing your trade.'
+      });
     } finally {
       setTradeLoading(false);
     }
@@ -329,6 +336,14 @@ export default function AssetDetail({ assetSymbol, onBack, onBalanceUpdate }: As
           </div>
         )}
       </AnimatePresence>
+
+      <StatusOverlay
+        isOpen={!!status}
+        type={status?.type || 'success'}
+        title={status?.title || ''}
+        message={status?.message}
+        onClose={() => setStatus(null)}
+      />
     </div>
   );
 }
