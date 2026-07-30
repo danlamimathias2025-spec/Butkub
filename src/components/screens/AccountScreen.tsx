@@ -21,6 +21,7 @@ export default function AccountScreen() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showKYCModal, setShowKYCModal] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [profile, setProfile] = useState<any>(null);
 
@@ -34,7 +35,7 @@ export default function AccountScreen() {
       }
     };
     fetchProfile();
-  }, [showKYCModal, showBankModal]);
+  }, [showKYCModal, showBankModal, showSecurityModal]);
 
   const userRole = profile?.role || 'USER';
   const isAdmin = auth.currentUser?.email === 'danlamimathias2025@gmail.com';
@@ -61,7 +62,11 @@ export default function AccountScreen() {
       detail: profile?.bankName ? `${profile.bankName} - ${profile.accountNumber.slice(-4)}` : 'NOT LINKED',
       action: () => setShowBankModal(true) 
     },
-    { icon: Lock, label: t('security') },
+    { 
+      icon: Lock, 
+      label: t('security'),
+      action: () => setShowSecurityModal(true)
+    },
     { icon: History, label: t('history'), action: () => setShowHistory(true) },
     { 
       icon: isDark ? Moon : Sun, 
@@ -113,6 +118,9 @@ export default function AccountScreen() {
         )}
         {showBankModal && (
           <BankSettings onBack={() => setShowBankModal(false)} />
+        )}
+        {showSecurityModal && (
+          <SecuritySettings onBack={() => setShowSecurityModal(false)} />
         )}
         {showCurrencyModal && (
           <motion.div 
@@ -284,3 +292,4 @@ export default function AccountScreen() {
 
 import KYCScreen from '../auth/KYCScreen';
 import BankSettings from '../account/BankSettings';
+import SecuritySettings from '../account/SecuritySettings';

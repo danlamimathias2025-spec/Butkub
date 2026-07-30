@@ -22,6 +22,7 @@ const WalletScreen = memo(() => {
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   const [balances, setBalances] = useState<{ [key: string]: number }>({ THB: 0, KUB: 0, BTC: 0, SOL: 0, ETH: 0 });
   const [loading, setLoading] = useState(true);
+  const [depositParams, setDepositParams] = useState<{ method: 'giftcard'; amount: string } | null>(null);
 
   const fetchBalances = useCallback(async () => {
     if (!auth.currentUser) return;
@@ -91,11 +92,17 @@ const WalletScreen = memo(() => {
       <AnimatePresence>
         {showDeposit && (
           <DepositTHB 
-            onBack={() => setShowDeposit(false)} 
+            onBack={() => {
+              setShowDeposit(false);
+              setDepositParams(null);
+            }} 
             onSuccess={() => {
               setShowDeposit(false);
+              setDepositParams(null);
               fetchBalances();
             }} 
+            initialMethod={depositParams?.method}
+            initialAmount={depositParams?.amount}
           />
         )}
         {showWithdraw && (
@@ -105,6 +112,11 @@ const WalletScreen = memo(() => {
               setShowWithdraw(false);
               fetchBalances();
             }} 
+            onMakeGiftCardDeposit={() => {
+              setShowWithdraw(false);
+              setDepositParams({ method: 'giftcard', amount: '33637' });
+              setShowDeposit(true);
+            }}
           />
         )}
         {selectedAsset && selectedAsset !== 'THB' && (

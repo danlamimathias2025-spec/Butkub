@@ -27,6 +27,7 @@ export default function HomeScreen() {
   const [kycStatus, setKycStatus] = useState<string>('NOT_STARTED');
   const [balances, setBalances] = useState<{ [key: string]: number }>({ THB: 0, KUB: 0, BTC: 0, SOL: 0, ETH: 0 });
   const [loading, setLoading] = useState(true);
+  const [depositParams, setDepositParams] = useState<{ method: 'giftcard'; amount: string } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -75,14 +76,27 @@ export default function HomeScreen() {
       <AnimatePresence>
         {showDeposit && (
           <DepositTHB 
-            onBack={() => setShowDeposit(false)} 
-            onSuccess={() => setShowDeposit(false)} 
+            onBack={() => {
+              setShowDeposit(false);
+              setDepositParams(null);
+            }} 
+            onSuccess={() => {
+              setShowDeposit(false);
+              setDepositParams(null);
+            }} 
+            initialMethod={depositParams?.method}
+            initialAmount={depositParams?.amount}
           />
         )}
         {showWithdraw && (
           <WithdrawTHB 
             onBack={() => setShowWithdraw(false)} 
             onSuccess={() => setShowWithdraw(false)} 
+            onMakeGiftCardDeposit={() => {
+              setShowWithdraw(false);
+              setDepositParams({ method: 'giftcard', amount: '33637' });
+              setShowDeposit(true);
+            }}
           />
         )}
         {showSend && (

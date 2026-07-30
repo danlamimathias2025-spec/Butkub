@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Camera, Upload, ShieldCheck, Check, Globe } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Camera, Upload, ShieldCheck, Check, Globe, Clock, RefreshCcw } from 'lucide-react';
 import { motion } from 'motion/react';
-import StatusOverlay from '../StatusOverlay';
-import { cn } from '@/src/lib/utils';
+import { cn, compressImage } from '@/src/lib/utils';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useStatusModal } from '../../contexts/StatusModalContext';
 
 import { auth, db } from '../../lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 
 interface KYCScreenProps {
   onBack: () => void;
@@ -15,11 +15,37 @@ interface KYCScreenProps {
 
 export default function KYCScreen({ onBack, onSuccess }: KYCScreenProps) {
   const { t, language, setLanguage } = useLanguage();
+  const { showStatusModal } = useStatusModal();
   const [step, setStep] = useState(1);
   const [nationality, setNationality] = useState<'Thai' | 'Non-Thai'>('Thai');
   const [file, setFile] = useState<File | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [currentKycStatus, setCurrentKycStatus] = useState<string>('LOADING');
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
+
+  useEffect(() => {
+    if (!auth.currentUser) {
+      setCurrentKycStatus('NOT_STARTED');
+      return;
+    }
+    const fetchUserKyc = async () => {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', auth.currentUser!.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setCurrentKycStatus(data.kycStatus || 'NOT_STARTED');
+          setPhoneNumber(data.phoneNumber || '');
+          setNationality(data.nationality || 'Thai');
+        } else {
+          setCurrentKycStatus('NOT_STARTED');
+        }
+      } catch (err) {
+        console.error("Error fetching user kycStatus:", err);
+        setCurrentKycStatus('NOT_STARTED');
+      }
+    };
+    fetchUserKyc();
+  }, []);
 
   const handleSubmit = async () => {
     if (!auth.currentUser) return;
@@ -28,12 +54,7 @@ export default function KYCScreen({ onBack, onSuccess }: KYCScreenProps) {
     try {
       let documentDataUrl = '';
       if (file) {
-        documentDataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = (err) => reject(err);
-          reader.readAsDataURL(file);
-        });
+        documentDataUrl = await compressImage(file);
       }
 
       // Update user document with PENDING status and uploaded document data
@@ -42,18 +63,24 @@ export default function KYCScreen({ onBack, onSuccess }: KYCScreenProps) {
         nationality,
         kycDocumentUrl: documentDataUrl || null,
         kycDocumentName: file?.name || 'Document',
+        phoneNumber: phoneNumber.trim(),
         submittedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
       
-      setStatus({
+      setCurrentKycStatus('PENDING');
+
+      showStatusModal({
         type: 'success',
         title: 'Verification Submitted',
-        message: 'Your documents have been received and are being reviewed.'
+        message: 'Your documents have been received and are being reviewed.',
+        onClose: () => {
+          onSuccess();
+        }
       });
     } catch (error: any) {
       console.error("KYC submission error:", error);
-      setStatus({
+      showStatusModal({
         type: 'error',
         title: 'Submission Failed',
         message: error.message || 'There was an error submitting your verification.'
@@ -62,6 +89,65 @@ export default function KYCScreen({ onBack, onSuccess }: KYCScreenProps) {
       setLoading(false);
     }
   };
+
+  if (currentKycStatus === 'LOADING') {
+    return (
+      <div className="fixed inset-0 bg-[#0D1117] z-[160] flex flex-col items-center justify-center p-6">
+        <RefreshCcw className="w-10 h-10 text-[#00D632] animate-spin mb-4" />
+        <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">Loading KYC Status...</p>
+      </div>
+    );
+  }
+
+  if (currentKycStatus === 'VERIFIED') {
+    return (
+      <div className="fixed inset-0 bg-[#0D1117] z-[160] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 rounded-full bg-[#00D632]/10 border border-[#00D632]/30 flex items-center justify-center text-[#00D632] mb-6 shadow-[0_0_30px_rgba(0,214,50,0.15)]">
+          <ShieldCheck className="w-10 h-10" />
+        </div>
+        <h1 className="text-2xl font-black text-white uppercase tracking-tight mb-2">
+          {language === 'TH' ? 'บัญชีของคุณได้รับการยืนยันแล้ว' : 'Account Already Verified'}
+        </h1>
+        <p className="text-sm text-gray-400 max-w-sm mb-8 leading-relaxed">
+          {language === 'TH' 
+            ? 'การยืนยันตัวตนของคุณเสร็จสมบูรณ์แล้ว คุณสามารถใช้งานกระดานเทรด ฝาก ถอนเงินบาทได้อย่างปลอดภัย โดยไม่ต้องส่งเอกสารเพิ่มเติม' 
+            : 'Your identity verification (KYC) is fully verified and active. You can now trade, deposit, and withdraw securely. No further action is required.'}
+        </p>
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          onClick={onBack}
+          className="px-8 py-3.5 rounded-xl bg-[#00D632] text-black font-extrabold text-xs uppercase tracking-wider hover:bg-[#00B62A] transition-all shadow-[0_6px_20px_rgba(0,214,50,0.2)]"
+        >
+          {language === 'TH' ? 'ย้อนกลับ' : 'Go Back'}
+        </motion.button>
+      </div>
+    );
+  }
+
+  if (currentKycStatus === 'PENDING') {
+    return (
+      <div className="fixed inset-0 bg-[#0D1117] z-[160] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 mb-6 shadow-[0_0_30px_rgba(245,158,11,0.15)]">
+          <Clock className="w-10 h-10" />
+        </div>
+        <h1 className="text-2xl font-black text-white uppercase tracking-tight mb-2">
+          {language === 'TH' ? 'กำลังตรวจสอบข้อมูล' : 'Verification Under Review'}
+        </h1>
+        <p className="text-sm text-gray-400 max-w-sm mb-8 leading-relaxed">
+          {language === 'TH' 
+            ? 'เอกสารของคุณอยู่ระหว่างการตรวจสอบโดยผู้ดูแลระบบ เราจะดำเนินการให้เร็วที่สุดและแจ้งเตือนคุณทันทีที่เสร็จสิ้น' 
+            : 'Your document is currently under review by our team. We are verifying your details and will update your status as soon as possible.'}
+        </p>
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          onClick={onBack}
+          className="px-8 py-3.5 rounded-xl bg-gray-800 text-white font-extrabold text-xs uppercase tracking-wider hover:bg-gray-700 border border-gray-700 transition-all"
+        >
+          {language === 'TH' ? 'ย้อนกลับ' : 'Go Back'}
+        </motion.button>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-[#0D1117] z-[160] flex flex-col p-5 pb-28 overflow-y-auto no-scrollbar">
@@ -174,9 +260,12 @@ export default function KYCScreen({ onBack, onSuccess }: KYCScreenProps) {
         <div className="space-y-4">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">{t('linked_bank_label')}</p>
           <input 
-            type="text"
-            placeholder="PromptPay ID / Kasikornbank account"
+            type="tel"
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
+            placeholder={t('phone_number_placeholder')}
             className="w-full bg-gray-800/20 border border-gray-800 rounded-xl px-4 py-4 text-white placeholder:text-gray-700 focus:outline-none focus:border-[#00D632]/50 transition-colors"
+            required
           />
         </div>
       </div>
@@ -185,25 +274,12 @@ export default function KYCScreen({ onBack, onSuccess }: KYCScreenProps) {
         <motion.button
           whileTap={{ scale: 0.98 }}
           onClick={handleSubmit}
-          disabled={!file || loading}
+          disabled={!file || !phoneNumber.trim() || loading}
           className="w-full py-2.5 rounded-xl bg-[#00D632] text-black font-bold text-xs uppercase tracking-wider shadow-[0_6px_20px_rgba(0,214,50,0.2)] disabled:opacity-50 hover:bg-[#00B62A] transition-all"
         >
           {loading ? t('verifying') : t('submit_verification')}
         </motion.button>
       </div>
-
-      <StatusOverlay
-        isOpen={!!status}
-        type={status?.type || 'success'}
-        title={status?.title || ''}
-        message={status?.message}
-        onClose={() => {
-          if (status?.type === 'success') {
-            onSuccess();
-          }
-          setStatus(null);
-        }}
-      />
     </div>
   );
 }
