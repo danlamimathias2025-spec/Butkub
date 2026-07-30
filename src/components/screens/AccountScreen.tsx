@@ -23,6 +23,7 @@ export default function AccountScreen() {
   const [showBankModal, setShowBankModal] = useState(false);
   const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [showFAQ, setShowFAQ] = useState(false);
   const [profile, setProfile] = useState<any>(null);
 
   React.useEffect(() => {
@@ -90,8 +91,8 @@ export default function AccountScreen() {
     { 
       icon: HelpCircle, 
       label: 'Help & Support', 
-      detail: 'Telegram @kt_johnson',
-      action: () => window.open('https://t.me/kt_johnson', '_blank')
+      detail: language === 'TH' ? 'ศูนย์ช่วยเหลือ & FAQ' : 'Help Center & FAQ',
+      action: () => setShowFAQ(true)
     },
   ];
 
@@ -121,6 +122,9 @@ export default function AccountScreen() {
         )}
         {showSecurityModal && (
           <SecuritySettings onBack={() => setShowSecurityModal(false)} />
+        )}
+        {showFAQ && (
+          <HelpCenter onBack={() => setShowFAQ(false)} />
         )}
         {showCurrencyModal && (
           <motion.div 
@@ -293,3 +297,4 @@ export default function AccountScreen() {
 import KYCScreen from '../auth/KYCScreen';
 import BankSettings from '../account/BankSettings';
 import SecuritySettings from '../account/SecuritySettings';
+import HelpCenter from '../account/HelpCenter';
