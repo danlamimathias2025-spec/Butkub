@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Eye, EyeOff, Key } from 'lucide-react';
+import { X, Eye, EyeOff, Key, Globe } from 'lucide-react';
 import { motion } from 'motion/react';
 import StatusOverlay from '../StatusOverlay';
 import { auth } from '@/src/lib/firebase';
@@ -32,13 +32,21 @@ export default function LoginScreen({ onClose, onSignUp, onSuccess, initialEmail
     setError('');
     setSuccess('');
     try {
+      // Store success message in sessionStorage before sign-in so App.tsx displays the overlay on boot
+      sessionStorage.setItem('auth_success_status', JSON.stringify({
+        type: 'success',
+        title: t('login_success_title') || 'Login Successful',
+        message: t('login_success_msg') || 'Welcome back to Bitkub!'
+      }));
+
       await signInWithEmailAndPassword(auth, email, password);
       setStatus({
         type: 'success',
-        title: 'Login Successful',
-        message: 'Welcome back to Bitkub!'
+        title: t('login_success_title') || 'Login Successful',
+        message: t('login_success_msg') || 'Welcome back to Bitkub!'
       });
     } catch (err: any) {
+      sessionStorage.removeItem('auth_success_status');
       let errorMessage = err.message || 'Failed to login';
       if (err.code === 'auth/user-not-found') {
         errorMessage = 'No account found with this email.';
@@ -84,12 +92,13 @@ export default function LoginScreen({ onClose, onSignUp, onSuccess, initialEmail
         <button onClick={onClose} className="p-2 -ml-2 text-gray-400">
           <X className="w-6 h-6" />
         </button>
-        <div className="flex bg-gray-800/50 rounded-full p-0.5 text-[10px] font-medium border border-gray-700">
+        <div className="flex items-center gap-1.5 bg-gray-800/60 rounded-full p-1 border border-gray-700/80 shadow-inner">
+          <Globe className="w-3.5 h-3.5 text-gray-400 ml-1.5" />
           <button 
             onClick={() => setLanguage('TH')}
             className={cn(
-              "px-3 py-0.5 rounded-full transition-all",
-              language === 'TH' ? "bg-gray-700 text-white font-bold" : "text-gray-500"
+              "px-3 py-1 rounded-full text-[10px] font-extrabold transition-all",
+              language === 'TH' ? "bg-[#00D632] text-black shadow-md" : "text-gray-400 hover:text-white"
             )}
           >
             TH
@@ -97,8 +106,8 @@ export default function LoginScreen({ onClose, onSignUp, onSuccess, initialEmail
           <button 
             onClick={() => setLanguage('EN')}
             className={cn(
-              "px-3 py-0.5 rounded-full transition-all",
-              language === 'EN' ? "bg-gray-700 text-white font-bold" : "text-gray-500"
+              "px-3 py-1 rounded-full text-[10px] font-extrabold transition-all",
+              language === 'EN' ? "bg-[#00D632] text-black shadow-md" : "text-gray-400 hover:text-white"
             )}
           >
             EN

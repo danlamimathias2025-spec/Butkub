@@ -77,9 +77,9 @@ export default function SplashScreen() {
         </p>
       </div>
 
-      <div className="absolute bottom-8">
-        <p className="text-[8px] text-gray-800 font-bold uppercase tracking-widest">
-          Splendid Design &copy; 2026
+      <div className="absolute bottom-8 text-center px-4">
+        <p className="text-[8px] text-gray-800 font-bold uppercase tracking-widest text-center">
+          Thailand 🇹🇭 Verified Crypto Exchange Since 2020
         </p>
       </div>
     </motion.div>

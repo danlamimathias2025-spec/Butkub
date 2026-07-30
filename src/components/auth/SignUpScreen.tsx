@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, CheckCircle2, Circle, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Circle, Eye, EyeOff, Globe } from 'lucide-react';
 import { motion } from 'motion/react';
 import StatusOverlay from '../StatusOverlay';
 import { auth, db } from '@/src/lib/firebase';
@@ -47,6 +47,13 @@ export default function SignUpScreen({ onBack, onSuccess, initialEmail = '' }: S
         onSuccess();
         return;
       }
+
+      // Store success message in sessionStorage before signup resolves
+      sessionStorage.setItem('auth_success_status', JSON.stringify({
+        type: 'success',
+        title: t('account_created_title') || 'Account Created!',
+        message: t('account_created_msg') || 'Your account has been created successfully. Welcome to Bitkub!'
+      }));
 
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -113,12 +120,13 @@ export default function SignUpScreen({ onBack, onSuccess, initialEmail = '' }: S
         <button onClick={() => onBack(email)} className="p-2 -ml-2 text-gray-400">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <div className="flex bg-gray-800/50 rounded-full p-0.5 text-[10px] font-medium border border-gray-700">
+        <div className="flex items-center gap-1.5 bg-gray-800/60 rounded-full p-1 border border-gray-700/80 shadow-inner">
+          <Globe className="w-3.5 h-3.5 text-gray-400 ml-1.5" />
           <button 
             onClick={() => setLanguage('TH')}
             className={cn(
-              "px-3 py-0.5 rounded-full transition-all",
-              language === 'TH' ? "bg-gray-700 text-white font-bold" : "text-gray-500"
+              "px-3 py-1 rounded-full text-[10px] font-extrabold transition-all",
+              language === 'TH' ? "bg-[#00D632] text-black shadow-md" : "text-gray-400 hover:text-white"
             )}
           >
             TH
@@ -126,8 +134,8 @@ export default function SignUpScreen({ onBack, onSuccess, initialEmail = '' }: S
           <button 
             onClick={() => setLanguage('EN')}
             className={cn(
-              "px-3 py-0.5 rounded-full transition-all",
-              language === 'EN' ? "bg-gray-700 text-white font-bold" : "text-gray-500"
+              "px-3 py-1 rounded-full text-[10px] font-extrabold transition-all",
+              language === 'EN' ? "bg-[#00D632] text-black shadow-md" : "text-gray-400 hover:text-white"
             )}
           >
             EN

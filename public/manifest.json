@@ -1,0 +1,16 @@
+{
+  "name": "Bitkub - Thailand's Leading Cryptocurrency Exchange",
+  "short_name": "Bitkub",
+  "description": "Bitkub is Thailand's leading cryptocurrency exchange app, offering a sleek, professional crypto dashboard in a premium dark mode theme.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D1117",
+  "theme_color": "#00D632",
+  "icons": [
+    {
+      "src": "/preview.jpg",
+      "sizes": "192x192 512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

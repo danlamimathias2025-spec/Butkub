@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Camera, Upload, ShieldCheck, Check } from 'lucide-react';
+import { ArrowLeft, Camera, Upload, ShieldCheck, Check, Globe } from 'lucide-react';
 import { motion } from 'motion/react';
 import StatusOverlay from '../StatusOverlay';
 import { cn } from '@/src/lib/utils';
@@ -14,7 +14,7 @@ interface KYCScreenProps {
 }
 
 export default function KYCScreen({ onBack, onSuccess }: KYCScreenProps) {
-  const { t } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const [step, setStep] = useState(1);
   const [nationality, setNationality] = useState<'Thai' | 'Non-Thai'>('Thai');
   const [file, setFile] = useState<File | null>(null);
@@ -66,14 +66,38 @@ export default function KYCScreen({ onBack, onSuccess }: KYCScreenProps) {
   return (
     <div className="fixed inset-0 bg-[#0D1117] z-[160] flex flex-col p-5 pb-28 overflow-y-auto no-scrollbar">
       <header className="mb-8">
-        <div className="flex items-center gap-4 mb-6">
-          <button 
-            onClick={onBack}
-            className="p-2 -ml-2 rounded-full hover:bg-gray-800 text-gray-400 transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <h1 className="text-xl font-black text-white uppercase tracking-tight">{t('kyc_title')}</h1>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={onBack}
+              className="p-2 -ml-2 rounded-full hover:bg-gray-800 text-gray-400 transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <h1 className="text-xl font-black text-white uppercase tracking-tight">{t('kyc_title')}</h1>
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-gray-800/60 rounded-full p-1 border border-gray-700/80 shadow-inner">
+            <Globe className="w-3.5 h-3.5 text-gray-400 ml-1.5" />
+            <button 
+              onClick={() => setLanguage('TH')}
+              className={cn(
+                "px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all",
+                language === 'TH' ? "bg-[#00D632] text-black shadow-md" : "text-gray-400 hover:text-white"
+              )}
+            >
+              TH
+            </button>
+            <button 
+              onClick={() => setLanguage('EN')}
+              className={cn(
+                "px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all",
+                language === 'EN' ? "bg-[#00D632] text-black shadow-md" : "text-gray-400 hover:text-white"
+              )}
+            >
+              EN
+            </button>
+          </div>
         </div>
         <div className="flex gap-2">
           {[1, 2, 3].map((s) => (

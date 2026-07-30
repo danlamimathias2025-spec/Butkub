@@ -8,6 +8,7 @@ import {
 import { db, auth } from '../../lib/firebase';
 import { collection, query, getDocs, doc, updateDoc, deleteDoc, where, writeBatch, increment, collectionGroup, setDoc } from 'firebase/firestore';
 import { cn } from '@/src/lib/utils';
+import { useLanguage } from '@/src/contexts/LanguageContext';
 import { triggerHaptic } from '@/src/lib/haptics';
 import StatusOverlay from '../StatusOverlay';
 
@@ -48,6 +49,7 @@ interface TransactionRequest {
 }
 
 export default function AdminDashboard({ onBack }: AdminDashboardProps) {
+  const { language, setLanguage } = useLanguage();
   const [activeTab, setActiveTab] = useState<'users' | 'requests'>('users');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [requests, setRequests] = useState<TransactionRequest[]>([]);
@@ -352,9 +354,32 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
             <Shield className="w-5 h-5 text-[#00D632]" /> Admin Dashboard
           </h1>
         </div>
-        <button onClick={fetchData} className="p-2 text-gray-400 hover:text-white transition-colors">
-          <RefreshCcw className={cn("w-5 h-5", loading && "animate-spin")} />
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 bg-gray-800/80 rounded-full p-1 border border-gray-700/80">
+            <Globe className="w-3 h-3 text-gray-400 ml-1" />
+            <button 
+              onClick={() => setLanguage('TH')}
+              className={cn(
+                "px-2 py-0.5 rounded-full text-[9px] font-extrabold transition-all",
+                language === 'TH' ? "bg-[#00D632] text-black shadow" : "text-gray-400 hover:text-white"
+              )}
+            >
+              TH
+            </button>
+            <button 
+              onClick={() => setLanguage('EN')}
+              className={cn(
+                "px-2 py-0.5 rounded-full text-[9px] font-extrabold transition-all",
+                language === 'EN' ? "bg-[#00D632] text-black shadow" : "text-gray-400 hover:text-white"
+              )}
+            >
+              EN
+            </button>
+          </div>
+          <button onClick={fetchData} className="p-2 text-gray-400 hover:text-white transition-colors">
+            <RefreshCcw className={cn("w-5 h-5", loading && "animate-spin")} />
+          </button>
+        </div>
       </header>
 
       <div className="flex bg-gray-900/50 p-1 mx-5 mt-4 rounded-xl border border-gray-800">

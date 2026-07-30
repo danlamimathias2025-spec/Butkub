@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Bell, QrCode, ShieldCheck } from 'lucide-react';
+import { Bell, QrCode, ShieldCheck, Globe } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavScroll } from '../contexts/NavScrollContext';
@@ -44,12 +44,13 @@ const TopNav = memo(({ onNotificationsClick }: TopNavProps) => {
           </div>
           <span className="text-white font-bold tracking-tight text-base uppercase">Bitkub</span>
         </div>
-        <div className="flex bg-gray-800/50 rounded-full p-0.5 text-[8px] font-medium border border-gray-700">
+        <div className="flex items-center gap-1 bg-gray-800/80 rounded-full p-0.5 text-[9px] font-bold border border-gray-700/80">
+          <Globe className="w-2.5 h-2.5 text-gray-400 ml-1" />
           <button 
             onClick={() => setLanguage('TH')}
             className={cn(
               "px-2 py-0.5 rounded-full transition-all",
-              language === 'TH' ? "bg-gray-700 text-white font-bold" : "text-gray-500"
+              language === 'TH' ? "bg-[#00D632] text-black font-extrabold shadow" : "text-gray-400 hover:text-white"
             )}
           >
             TH
@@ -58,7 +59,7 @@ const TopNav = memo(({ onNotificationsClick }: TopNavProps) => {
             onClick={() => setLanguage('EN')}
             className={cn(
               "px-2 py-0.5 rounded-full transition-all",
-              language === 'EN' ? "bg-gray-700 text-white font-bold" : "text-gray-500"
+              language === 'EN' ? "bg-[#00D632] text-black font-extrabold shadow" : "text-gray-400 hover:text-white"
             )}
           >
             EN

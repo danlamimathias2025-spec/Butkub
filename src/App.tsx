@@ -7,6 +7,7 @@ import SplashScreen from './components/SplashScreen';
 import { AnimatePresence, motion } from 'motion/react';
 import { NavScrollProvider } from './contexts/NavScrollContext';
 import AdminNotificationModal from './components/AdminNotificationModal';
+import StatusOverlay from './components/StatusOverlay';
 
 const HomeScreen = lazy(() => import('./components/screens/HomeScreen'));
 const MarketScreen = lazy(() => import('./components/screens/MarketScreen'));
@@ -36,6 +37,7 @@ export default function App() {
   const [authView, setAuthView] = useState<'login' | 'signup' | 'kyc'>('login');
   const [authEmail, setAuthEmail] = useState('');
   const [showKYC, setShowKYC] = useState(false);
+  const [authSuccessStatus, setAuthSuccessStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
 
   const handleTabChange = (newTab: TabType) => {
     if (newTab !== activeTab) {
@@ -57,6 +59,17 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
+        // Check if there is a pending auth success message stored from login/signup
+        try {
+          const storedStatus = sessionStorage.getItem('auth_success_status');
+          if (storedStatus) {
+            setAuthSuccessStatus(JSON.parse(storedStatus));
+            sessionStorage.removeItem('auth_success_status');
+          }
+        } catch {
+          // ignore storage parse errors
+        }
+
         const fetchProfile = async (retries = 3) => {
           try {
             const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -199,6 +212,13 @@ export default function App() {
           <BottomNav activeTab={activeTab} setActiveTab={handleTabChange} />
         </div>
         {user && <AdminNotificationModal userId={user.uid} />}
+        <StatusOverlay
+          isOpen={!!authSuccessStatus}
+          type={authSuccessStatus?.type || 'success'}
+          title={authSuccessStatus?.title || ''}
+          message={authSuccessStatus?.message}
+          onClose={() => setAuthSuccessStatus(null)}
+        />
       </div>
     </NavScrollProvider>
   );

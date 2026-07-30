@@ -92,10 +92,14 @@ const translations: Translations = {
   reset_success: { EN: 'Password reset email sent! Please check your inbox.', TH: 'ส่งอีเมลรีเซ็ตรหัสผ่านแล้ว! โปรดตรวจสอบกล่องจดหมายของคุณ' },
   reset_error: { EN: 'Failed to send reset email. Please ensure the email is correct.', TH: 'ไม่สามารถส่งอีเมลรีเซ็ตได้ โปรดตรวจสอบว่าอีเมลถูกต้อง' },
   sending: { EN: 'Sending...', TH: 'กำลังส่ง...' },
+  login_success_title: { EN: 'Login Successful', TH: 'เข้าสู่ระบบสำเร็จ' },
+  login_success_msg: { EN: 'Welcome back to Bitkub!', TH: 'ยินดีต้อนรับกลับสู่ Bitkub!' },
 
   // SignUp
   create_account: { EN: 'Create Account', TH: 'สร้างบัญชี' },
   signup_subtitle: { EN: 'Trade crypto with local Thai Baht (THB) support.', TH: 'เทรดคริปโตด้วยเงินบาท (THB) อย่างง่ายดาย' },
+  account_created_title: { EN: 'Account Created!', TH: 'สร้างบัญชีสำเร็จ!' },
+  account_created_msg: { EN: 'Your account has been created successfully. Welcome to Bitkub!', TH: 'สร้างบัญชีของคุณเรียบร้อยแล้ว ยินดีต้อนรับสู่ Bitkub!' },
   confirmPassword_label: { EN: 'Confirm Password', TH: 'ยืนยันรหัสผ่าน' },
   password_req: { EN: 'Password Requirements', TH: 'ข้อกำหนดของรหัสผ่าน' },
   req_len: { EN: 'Minimum 12 characters', TH: 'อย่างน้อย 12 ตัวอักษร' },
