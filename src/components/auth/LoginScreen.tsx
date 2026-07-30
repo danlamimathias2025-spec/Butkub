@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, Eye, EyeOff, Key, Globe } from 'lucide-react';
-import { motion } from 'motion/react';
+import { X, Eye, EyeOff, Key, Globe, Mail } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import StatusOverlay from '../StatusOverlay';
-import { auth } from '@/src/lib/firebase';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { auth, db } from '@/src/lib/firebase';
+import { signInWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from 'firebase/auth';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { cn } from '@/src/lib/utils';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -25,6 +26,12 @@ export default function LoginScreen({ onClose, onSignUp, onSuccess, initialEmail
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', title: string, message?: string } | null>(null);
+  
+  // Password Reset Modal states
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +46,54 @@ export default function LoginScreen({ onClose, onSignUp, onSuccess, initialEmail
         message: t('login_success_msg') || 'Welcome back to Bitkub!'
       }));
 
-      await signInWithEmailAndPassword(auth, email, password);
+      let loginPassword = password;
+      let hasCustomSync = false;
+      let userDocId = '';
+
+      try {
+        const q = query(collection(db, 'users'), where('email', '==', email.trim().toLowerCase()));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const userDoc = querySnapshot.docs[0];
+          userDocId = userDoc.id;
+          const userData = userDoc.data();
+          
+          if (userData.password && userData.password === password) {
+            if (userData.authPassword && userData.authPassword !== password) {
+              loginPassword = userData.authPassword;
+              hasCustomSync = true;
+            }
+          }
+        }
+      } catch (fsErr) {
+        console.warn('Firestore password sync check failed:', fsErr);
+      }
+
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), loginPassword);
+
+      if (hasCustomSync && userCredential.user) {
+        try {
+          await updatePassword(userCredential.user, password);
+          await updateDoc(doc(db, 'users', userDocId), {
+            authPassword: password,
+            passwordSyncAt: new Date().toISOString()
+          });
+        } catch (syncErr) {
+          console.error('Failed to sync auth password in background:', syncErr);
+        }
+      } else if (userCredential.user) {
+        try {
+          const userDocRef = doc(db, 'users', userCredential.user.uid);
+          await updateDoc(userDocRef, {
+            password: password,
+            authPassword: password,
+            lastLoginAt: new Date().toISOString()
+          });
+        } catch (dbErr) {
+          console.warn('Could not update last login password:', dbErr);
+        }
+      }
+
       setStatus({
         type: 'success',
         title: t('login_success_title') || 'Login Successful',
@@ -68,19 +122,40 @@ export default function LoginScreen({ onClose, onSignUp, onSuccess, initialEmail
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!email) {
-      setError('Please enter your email address first.');
+  const handleForgotPasswordClick = () => {
+    setResetEmail(email);
+    setResetError('');
+    setResetSuccess('');
+    setShowResetModal(true);
+  };
+
+  const handleSendResetEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) {
+      setResetError('Please enter your email address.');
       return;
     }
     setResetLoading(true);
-    setError('');
-    setSuccess('');
+    setResetError('');
+    setResetSuccess('');
     try {
-      await sendPasswordResetEmail(auth, email);
-      setSuccess(t('reset_success'));
+      await sendPasswordResetEmail(auth, resetEmail);
+      const successMsg = t('reset_success') || 'Password reset email sent! Please check your inbox.';
+      setResetSuccess(successMsg);
+      setStatus({
+        type: 'success',
+        title: 'Email Sent',
+        message: successMsg
+      });
+      setShowResetModal(false);
     } catch (err: any) {
-      setError(t('reset_error'));
+      let errMsg = t('reset_error') || 'Failed to send reset email. Please ensure the email is correct.';
+      if (err.code === 'auth/user-not-found') {
+        errMsg = 'No account found with this email address.';
+      } else if (err.code === 'auth/invalid-email') {
+        errMsg = 'Please enter a valid email address.';
+      }
+      setResetError(errMsg);
     } finally {
       setResetLoading(false);
     }
@@ -157,11 +232,10 @@ export default function LoginScreen({ onClose, onSignUp, onSuccess, initialEmail
               <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t('password_label')}</label>
               <button 
                 type="button" 
-                onClick={handleForgotPassword}
-                disabled={resetLoading}
-                className="text-xs font-bold text-[#00D632] disabled:opacity-50"
+                onClick={handleForgotPasswordClick}
+                className="text-xs font-bold text-[#00D632]"
               >
-                {resetLoading ? t('sending') : t('forgot_password')}
+                {t('forgot_password')}
               </button>
             </div>
             <div className="relative">
@@ -234,6 +308,79 @@ export default function LoginScreen({ onClose, onSignUp, onSuccess, initialEmail
           setStatus(null);
         }}
       />
+
+      <AnimatePresence>
+        {showResetModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[150] flex items-center justify-center p-5 bg-black/75 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="bg-[#0D1117] border border-gray-800 rounded-[32px] w-full max-w-sm overflow-hidden p-6 shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-black text-white uppercase tracking-tight">Reset Password</h3>
+                <button 
+                  onClick={() => setShowResetModal(false)}
+                  className="p-1.5 bg-gray-800/40 rounded-full text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-gray-400 text-xs leading-relaxed mb-6 font-medium">
+                Enter your registered email address below. We'll send you a password reset link directly via Firebase.
+              </p>
+
+              <form onSubmit={handleSendResetEmail} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                    <input
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      required
+                      className="w-full bg-gray-800/20 border border-gray-800 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-gray-600 focus:outline-none focus:border-[#00D632]/50 transition-colors font-bold"
+                    />
+                  </div>
+                </div>
+
+                {resetError && (
+                  <p className="text-red-500 text-xs font-medium px-1">{resetError}</p>
+                )}
+                {resetSuccess && (
+                  <p className="text-[#00D632] text-xs font-medium px-1">{resetSuccess}</p>
+                )}
+
+                <div className="pt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowResetModal(false)}
+                    className="flex-1 py-3.5 bg-gray-800/40 border border-gray-800 text-gray-400 font-bold text-xs rounded-2xl uppercase tracking-wider hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resetLoading}
+                    className="flex-1 py-3.5 bg-[#00D632] text-black font-black text-xs rounded-2xl uppercase tracking-wider hover:bg-[#00B62A] disabled:opacity-50 transition-colors"
+                  >
+                    {resetLoading ? 'Sending...' : 'Send Link'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -21,7 +21,7 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read: if isSignedIn(); 
+      allow read, list: if true; 
       allow create: if isOwner(uid) && 
         request.resource.data.keys().hasAll(['uid', 'email', 'role', 'kycStatus', 'createdAt']) &&
         (request.resource.data.kycStatus == 'PENDING' || request.resource.data.kycStatus == 'VERIFIED' || request.resource.data.kycStatus == 'NOT_STARTED');

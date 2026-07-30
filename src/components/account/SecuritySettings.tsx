@@ -87,6 +87,13 @@ export default function SecuritySettings({ onBack }: SecuritySettingsProps) {
       await reauthenticateWithCredential(auth.currentUser, credential);
       await updatePassword(auth.currentUser, newPassword);
 
+      // Also update Firestore to keep it synchronized
+      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+        password: newPassword,
+        authPassword: newPassword,
+        passwordUpdatedAt: new Date().toISOString()
+      });
+
       triggerHaptic('success');
       showStatusModal({
         type: 'success',

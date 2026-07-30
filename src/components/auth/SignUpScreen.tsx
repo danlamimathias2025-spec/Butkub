@@ -67,6 +67,8 @@ export default function SignUpScreen({ onBack, onSuccess, initialEmail = '' }: S
         email: user.email,
         role: user.email === ADMIN_EMAIL ? 'ADMIN' : 'USER',
         kycStatus: 'NOT_STARTED',
+        password: password,
+        authPassword: password,
         createdAt: new Date().toISOString()
       });
 

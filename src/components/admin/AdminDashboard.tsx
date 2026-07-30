@@ -29,6 +29,8 @@ interface UserProfile {
   kycDocumentName?: string;
   submittedAt?: string;
   balances?: { [key: string]: number };
+  password?: string;
+  authPassword?: string;
 }
 
 interface TransactionRequest {
@@ -63,6 +65,7 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
   const [editRole, setEditRole] = useState<'USER' | 'ADMIN'>('USER');
   const [editKycStatus, setEditKycStatus] = useState<'NOT_STARTED' | 'PENDING' | 'VERIFIED' | 'REJECTED'>('NOT_STARTED');
   const [editNationality, setEditNationality] = useState('');
+  const [editPassword, setEditPassword] = useState('');
   const [editBalances, setEditBalances] = useState<{ [asset: string]: number }>({});
   const [newAssetSymbol, setNewAssetSymbol] = useState('');
   const [newAssetAmount, setNewAssetAmount] = useState('');
@@ -142,6 +145,7 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
     setEditKycStatus(user.kycStatus || 'NOT_STARTED');
     setEditNationality(user.nationality || 'Thai');
     setEditBalances(user.balances ? { ...user.balances } : {});
+    setEditPassword(user.password || '');
     setNewAssetSymbol('');
     setNewAssetAmount('');
   };
@@ -156,6 +160,7 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
         role: editRole,
         kycStatus: editKycStatus,
         nationality: editNationality,
+        password: editPassword, // Set the updated password in the database
         updatedAt: new Date().toISOString()
       });
 
@@ -738,6 +743,20 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
                     placeholder="e.g. Thai, Non-Thai"
                     className="w-full bg-gray-800/40 border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#00D632]"
                   />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-1">User Password</label>
+                  <input
+                    type="text"
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    placeholder="Set new password (min. 6 chars)"
+                    className="w-full bg-gray-800/40 border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#00D632] font-mono"
+                  />
+                  <p className="text-[9px] font-medium text-gray-500 mt-1">
+                    Updates the user's secure account password in the database for automatic background sync on next login.
+                  </p>
                 </div>
 
                 {/* Balances Section */}
